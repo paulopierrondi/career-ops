@@ -1,0 +1,15 @@
+.env
+.env.*
+node_modules
+.git
+.codegraph
+.cursor
+.claude
+.brain
+batch/logs
+data/parser-output
+output
+*.mov
+*.mp4
+*.bak
+docs/superpowers

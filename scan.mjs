@@ -157,6 +157,17 @@ function normalizeKeywordList(value) {
     .filter(Boolean);
 }
 
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function keywordMatches(haystack, keyword) {
+  if (/^[a-z]{1,3}$/.test(keyword)) {
+    return new RegExp(`(^|[^a-z])${escapeRegex(keyword)}([^a-z]|$)`).test(haystack);
+  }
+  return haystack.includes(keyword);
+}
+
 export function buildLocationFilter(locationFilter) {
   if (!locationFilter) return () => true;
   const alwaysAllow = normalizeKeywordList(locationFilter.always_allow);
@@ -166,10 +177,10 @@ export function buildLocationFilter(locationFilter) {
   return (location) => {
     if (typeof location !== 'string' || location.trim() === '') return true;
     const lower = location.toLowerCase();
-    if (alwaysAllow.length > 0 && alwaysAllow.some(k => lower.includes(k))) return true;
-    if (block.length > 0 && block.some(k => lower.includes(k))) return false;
+    if (alwaysAllow.length > 0 && alwaysAllow.some(k => keywordMatches(lower, k))) return true;
+    if (block.length > 0 && block.some(k => keywordMatches(lower, k))) return false;
     if (allow.length === 0) return true;
-    return allow.some(k => lower.includes(k));
+    return allow.some(k => keywordMatches(lower, k));
   };
 }
 
@@ -224,9 +235,17 @@ function loadSeenCompanyRoles() {
 
 // ── Pipeline writer ─────────────────────────────────────────────────
 
+export function ensurePipelineFile(filePath = PIPELINE_PATH) {
+  mkdirSync(path.dirname(filePath), { recursive: true });
+  if (!existsSync(filePath)) {
+    writeFileSync(filePath, '## Pendientes\n\n## Procesadas\n', 'utf-8');
+  }
+}
+
 function appendToPipeline(offers) {
   if (offers.length === 0) return;
 
+  ensurePipelineFile(PIPELINE_PATH);
   let text = readFileSync(PIPELINE_PATH, 'utf-8');
 
   // Find "## Pendientes" section and append after it

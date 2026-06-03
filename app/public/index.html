@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>career-ops command center</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">career-ops</p>
+        <h1>Opportunity command center</h1>
+      </div>
+      <div class="actions">
+        <button id="run-scan" type="button">Run scan</button>
+        <button id="run-daily" type="button">Daily report</button>
+      </div>
+    </header>
+
+    <section class="metrics" aria-label="Pipeline metrics">
+      <div class="metric"><span id="metric-apps">0</span><label>tracked</label></div>
+      <div class="metric"><span id="metric-opps">0</span><label>pending</label></div>
+      <div class="metric urgent"><span id="metric-human">0</span><label>human gate</label></div>
+      <div class="metric"><span id="metric-top">0</span><label>top score</label></div>
+    </section>
+
+    <section class="grid">
+      <section class="panel wide">
+        <div class="panel-head">
+          <h2>Best opportunities</h2>
+          <span id="opportunity-count"></span>
+        </div>
+        <div id="opportunities" class="list"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h2>Applications</h2>
+          <span id="application-count"></span>
+        </div>
+        <div id="applications" class="list compact"></div>
+      </section>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Recent scans</h2>
+        <span id="scan-count"></span>
+      </div>
+      <div id="scan-history" class="scan-table"></div>
+    </section>
+  </main>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

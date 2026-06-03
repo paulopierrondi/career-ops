@@ -33,6 +33,7 @@ const APPLY_PATTERNS = [
   /submit application/i,
   /easy apply/i,
   /start application/i,
+  /i['’]m interested/i,
   /ich bewerbe mich/i,
 ];
 

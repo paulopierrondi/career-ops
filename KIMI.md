@@ -28,9 +28,6 @@ Required local council handoff:
 Registry id: `career-ops`.
 <!-- PROJECT_LOCAL_COUNCIL_END -->
 
-@./AGENTS.md
-<!-- Add anything Gemini specific that other agents don't need -->
-
 <!-- OBSIDIAN_SECOND_BRAIN_START -->
 # Obsidian Second Brain - Required Preflight
 

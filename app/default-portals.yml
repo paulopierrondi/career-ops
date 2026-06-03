@@ -1,0 +1,87 @@
+location_filter:
+  always_allow:
+    - "United States"
+    - "USA"
+    - "US"
+    - "North America"
+    - "Americas"
+    - "Remote"
+    - "Washington"
+    - "New York"
+    - "San Francisco"
+    - "Santa Clara"
+    - "Mountain View"
+    - "Kirkland"
+    - "Chicago"
+  allow:
+    - "Remote"
+    - "United States"
+    - "USA"
+    - "US"
+    - "North America"
+    - "Americas"
+    - "Washington"
+    - "New York"
+    - "San Francisco"
+    - "Santa Clara"
+    - "Mountain View"
+    - "Kirkland"
+    - "Chicago"
+  block:
+    - "India"
+    - "Bangalore"
+    - "Bengaluru"
+    - "Hyderabad"
+    - "Japan"
+    - "Tokyo"
+    - "Australia"
+
+title_filter:
+  positive:
+    - "ServiceNow"
+    - "Now Assist"
+    - "Agentic"
+    - "AI"
+    - "Data and AI"
+    - "Workflow"
+    - "Platform Architect"
+    - "Solution Architect"
+    - "Solutions Architect"
+    - "Advisory Solution Consultant"
+    - "Enterprise Account Exec"
+    - "Financial Services"
+    - "FSI"
+    - "Forward Deployed"
+    - "Applied AI"
+    - "GTM"
+  negative:
+    - "Junior"
+    - "Intern"
+    - "Business Development Representative"
+    - "BDR"
+    - "SDR"
+    - "Java "
+    - "Mainframe"
+    - "COBOL"
+  seniority_boost:
+    - "Senior"
+    - "Staff"
+    - "Principal"
+    - "Lead"
+    - "Director"
+
+tracked_companies:
+  - name: ServiceNow
+    careers_url: https://careers.smartrecruiters.com/ServiceNow
+    provider: smartrecruiters
+    smartrecruiters_company: ServiceNow
+    smartrecruiters_limit: 100
+    notes: "Primary ServiceNow careers feed via SmartRecruiters public API."
+    enabled: true
+  - name: Anthropic
+    careers_url: https://job-boards.greenhouse.io/anthropic
+    api: https://boards-api.greenhouse.io/v1/boards/anthropic/jobs
+    enabled: true
+  - name: OpenAI
+    careers_url: https://openai.com/careers
+    enabled: false
