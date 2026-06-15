@@ -1,33 +1,3 @@
-
-
-<!-- PROJECT_LOCAL_COUNCIL_START -->
-## Project Local Council - Required Context
-
-This repo has a local council overlay. It does not replace the global Product Council; it makes the global roles specific to this repo.
-
-Before planning, editing, reviewing, testing, release, automation, Linear, secrets, UI or marketing work, read:
-
-- `.brain/PROJECT_COUNCIL.md`
-- relevant `.brain/local-agents/*.md`
-- `.brain/HUB_COUNCIL_CONTEXT.md`
-- `.brain/PROJECT_CONTEXT.md`
-- `/Users/paulopierrondi/Documents/Obsidian Vault/99_System/Prompt Caching Workflow Policy.md` when available
-- `AGENTS.md` and `GEMINI.md`
-
-Local agents are advisory role contracts, not autonomous permission grants. They inherit all hard gates from Agent Hub, Obsidian, Linear, Automation Email Policy and Security/Secrets policy.
-
-Required local council handoff:
-
-- local agent(s) considered;
-- decision or recommendation;
-- files/commands/evidence;
-- risk and human gate;
-- exact next action.
-- prompt_cache strategy and cache telemetry when a provider exposes `cached_tokens` or equivalent.
-
-Registry id: `career-ops`.
-<!-- PROJECT_LOCAL_COUNCIL_END -->
-
 # Career-Ops -- AI Job Search Pipeline
 
 ## Origin
@@ -48,7 +18,7 @@ There are two layers. Read `DATA_CONTRACT.md` for the full list.
 
 **System Layer (auto-updatable, DON'T put user data here):**
 - `modes/_shared.md`, `modes/oferta.md`, all other modes
-- `AGENTS.md`, `CLAUDE.md`, `*.mjs` scripts, `dashboard/*`, `templates/*`, `batch/*`
+- `AGENTS.md`, `CLAUDE.md`, `OPENCODE.md`, `*.mjs` scripts, `dashboard/*`, `templates/*`, `batch/*`
 
 **THE RULE: When the user asks to customize anything (archetypes, narrative, negotiation scripts, proof points, location policy, comp targets), ALWAYS write to `modes/_profile.md` or `config/profile.yml`. NEVER edit `modes/_shared.md` for user-specific content.** This ensures system updates don't overwrite their customizations.
 
@@ -101,16 +71,16 @@ AI-powered, CLI-agnostic job search automation: pipeline tracking, offer evaluat
 
 ### First Run — Onboarding (IMPORTANT)
 
-**Before doing ANYTHING else, check if the system is set up.** Run these checks silently every time a session starts:
+**Before doing ANYTHING else, check if the system is set up.** On the first message of each session, run the cold-start check — one deterministic source of truth (this doc and `doctor.mjs` share the same prerequisite list, so they can never drift):
 
-1. Does `cv.md` exist?
-2. Does `config/profile.yml` exist (not just profile.example.yml)?
-3. Does `modes/_profile.md` exist (not just _profile.template.md)?
-4. Does `portals.yml` exist (not just templates/portals.example.yml)?
+```bash
+node doctor.mjs --json
+```
 
-If `modes/_profile.md` is missing, copy from `modes/_profile.template.md` silently. This is the user's customization file — it will never be overwritten by updates.
+Output: `{"onboardingNeeded": <bool>, "missing": [...], "warnings": [...]}`, where `missing` lists whichever of `cv.md`, `config/profile.yml`, `modes/_profile.md`, `portals.yml` are absent. `warnings` is reserved for non-blocking setup signals.
 
-**If ANY of these is missing, enter onboarding mode.** Do NOT proceed with evaluations, scans, or any other mode until the basics are in place. Guide the user step by step:
+- If `modes/_profile.md` is in `missing`, copy it silently from `modes/_profile.template.md` (the user's customization file — never overwritten by updates). It's then resolved.
+- **If, after that, `onboardingNeeded` is still true (any of `cv.md` / `config/profile.yml` / `portals.yml` is missing), enter onboarding mode.** Do NOT proceed with evaluations, scans, or any other mode until the basics are in place. Guide the user step by step:
 
 #### Step 1: CV (required)
 If `cv.md` is missing, ask:
@@ -181,7 +151,7 @@ Once all files exist, confirm:
 Then suggest automation:
 > "Want me to scan for new offers automatically? I can set up a recurring scan every few days so you don't miss anything. Just say 'scan every 3 days' and I'll configure it."
 
-If the user accepts, use the `/loop` or `/schedule` skill (if available) to set up a recurring `/career-ops scan` (or `/career-ops-scan` if using OpenCode). If those aren't available, suggest adding a cron job or remind them to run `/career-ops scan` (or `/career-ops-scan` if using OpenCode) periodically.
+If the user accepts, use the `/loop` or `/schedule` skill (if available) to set up a recurring `/career-ops scan` (or `/career-ops-scan` if using OpenCode). If those aren't available, suggest adding a cron job or remind them to run `/career-ops scan` periodically.
 
 ### Personalization
 
@@ -201,6 +171,7 @@ Default modes are in `modes/` (English). Additional language-specific modes are 
 
 - **German (DACH market):** `modes/de/` — native German translations with DACH-specific vocabulary (13. Monatsgehalt, Probezeit, Kündigungsfrist, AGG, Tarifvertrag, etc.). Includes `_shared.md`, `angebot.md` (evaluation), `bewerben.md` (apply), `pipeline.md`.
 - **French (Francophone market):** `modes/fr/` — native French translations with France/Belgium/Switzerland/Luxembourg-specific vocabulary (CDI/CDD, convention collective SYNTEC, RTT, mutuelle, prévoyance, 13e mois, intéressement/participation, titres-restaurant, CSE, portage salarial, etc.). Includes `_shared.md`, `offre.md` (evaluation), `postuler.md` (apply), `pipeline.md`.
+- **Arabic (Middle East / Arab market):** `modes/ar/` — native Arabic translations with Arab region-specific vocabulary (مكافأة نهاية الخدمة, التأمينات الاجتماعية, راتب إجمالي/صافي, فترة التجربة, فترة الإخطار, البدلات, etc.). Includes `_shared.md`, `fursah.md` (evaluation), `takdeem.md` (apply), `pipeline.md`.
 - **Japanese (Japan market):** `modes/ja/` — native Japanese translations with Japan-specific vocabulary (正社員, 業務委託, 賞与, 退職金, みなし残業, 年俸制, 36協定, 通勤手当, 住宅手当, etc.). Includes `_shared.md`, `kyujin.md` (evaluation), `oubo.md` (apply), `pipeline.md`.
 - **Turkish (Turkey market):** `modes/tr/` — native Turkish translations with Turkey-specific vocabulary (SGK, kıdem tazminatı, ihbar süresi, brüt/net maaş, AGİ, BES, yemek kartı, yol yardımı, TÜFE zammı, etc.). Includes `_shared.md`, `is-ilani.md` (evaluation), `basvuru.md` (apply), `pipeline.md`.
 
@@ -214,6 +185,11 @@ Default modes are in `modes/` (English). Additional language-specific modes are 
 2. User sets `language.modes_dir: modes/fr` in `config/profile.yml` → always use French modes
 3. You detect a French JD → suggest switching to French modes
 
+**When to use Arabic modes:** If the user is targeting Arabic-language job postings, lives in the Middle East / Arab region, or asks for Arabic output. Either:
+1. User says "use Arabic modes" → read from `modes/ar/` instead of `modes/`
+2. User sets `language.modes_dir: modes/ar` in `config/profile.yml` → always use Arabic modes
+3. You detect an Arabic JD → suggest switching to Arabic modes
+
 **When to use Japanese modes:** If the user is targeting Japanese-language job postings, lives in Japan, or asks for Japanese output. Either:
 1. User says "use Japanese modes" → read from `modes/ja/` instead of `modes/`
 2. User sets `language.modes_dir: modes/ja` in `config/profile.yml` → always use Japanese modes
@@ -224,7 +200,7 @@ Default modes are in `modes/` (English). Additional language-specific modes are 
 2. User sets `language.modes_dir: modes/tr` in `config/profile.yml` → always use Turkish modes
 3. You detect a Turkish JD → suggest switching to Turkish modes
 
-**When NOT to:** If the user applies to English-language roles, even at French, German, Japanese, or Turkish companies, use the default English modes — *unless* the user has explicitly requested another mode in this conversation, or `language.modes_dir` is set in `config/profile.yml` (the explicit user preference always wins over JD-language detection).
+**When NOT to:** If the user applies to English-language roles, even at French, German, Arabic, Japanese, or Turkish companies, use the default English modes — *unless* the user has explicitly requested another mode in this conversation, or `language.modes_dir` is set in `config/profile.yml` (the explicit user preference always wins over JD-language detection).
 
 ### Skill Modes
 
@@ -300,10 +276,10 @@ When spawning headless workers for batch processing, use the appropriate command
 | CLI | Command |
 |-----|---------|
 | Claude Code | `claude -p "prompt"` |
+| **OpenCode** | `opencode run "prompt"` |
 | Gemini CLI | `gemini -p "prompt"` |
 | Copilot CLI | `copilot -p "prompt"` |
 | Codex | `codex exec "prompt"` |
-| OpenCode | `opencode run "prompt"` |
 | Qwen | `qwen -p "prompt"` |
 
 ## Stack and Conventions
@@ -333,10 +309,12 @@ Write one TSV file per evaluation to `batch/tracker-additions/{num}-{company-slu
 5. `status` -- canonical status (e.g., `Evaluated`)
 6. `score` -- format `X.X/5` (e.g., `4.2/5`)
 7. `pdf` -- `✅` or `❌`
-8. `report` -- markdown link `[num](reports/...)`
+8. `report` -- markdown link, always written **root-relative**: `[num](reports/...)`
 9. `notes` -- one-line summary
 
 **Note:** In applications.md, score comes BEFORE status. The merge script handles this column swap automatically.
+
+**Report link normalization:** The TSV always carries a **root-relative** `[num](reports/...)` link. `merge-tracker.mjs` rewrites it so the link is relative to the tracker file's own directory before writing it into the tracker — `../reports/...` when the tracker is at `data/applications.md`, or `reports/...` at the root layout. This keeps links clickable from the tracker (markdown links resolve relative to the file that contains them). Normalization is idempotent. To fix links in an existing tracker, run `node merge-tracker.mjs --migrate` (see #760).
 
 ### Pipeline Integrity
 
@@ -367,96 +345,3 @@ Write one TSV file per evaluation to `batch/tracker-additions/{num}-{company-slu
 - No markdown bold (`**`) in status field
 - No dates in status field (use the date column)
 - No extra text (use the notes column)
-
-<!-- OBSIDIAN_SECOND_BRAIN_START -->
-# Obsidian Second Brain - Required Preflight
-
-Primary vault: `/Users/paulopierrondi/Documents/Obsidian Vault`
-Repository: `/Users/paulopierrondi/Projects/career-ops`
-
-This repository is part of Paulo's Obsidian second brain. For AI coding agents, this is a required workflow, not optional context.
-
-## User Profile Snapshot
-
-- Paulo is a ServiceNow Technical Account Executive focused on Banco Bradesco / FSI Brazil, working with Rodrigo Rezende, Joao Saes, Impact and CEG/Services.
-- Core enterprise themes: Bradesco strategy, CMDB/CSDM, Now Assist/AI Agents, governance, operating model, FSI positioning and 2026 roadmap.
-- Top-of-mind projects include `pptx-engine`, autonomous Claude Code agents, `exploratorio`, `investcoach_ai`, Now Assist Bradesco Operating Model and side-project monetization/IP.
-- Style: direct, executive, dense, structured, copy-paste ready, no fluff or motivational tone; PT-BR for Brazil-facing content; honest analytical pushback is welcome.
-- For Bradesco Now Assist content, always connect operating model -> adoption velocity -> revenue expansion.
-
-## Agent Hub Enforcement
-
-Before local work with terminal, patch, automation, release, ads, App Store, Linear, secrets or production, run:
-
-```bash
-/Users/paulopierrondi/agents-hub/scripts/agent-preflight.py --automation manual-codex --surface Codex --risk workspace_write --cwd "$PWD"
-```
-
-If the preflight fails or blocks on a human gate, stop and report. The source of truth is registry + scheduler + handoffs + state + health + human gates, not any individual CLI. App Store, ads, deploy/production, Git push/merge, bulk Linear and secrets require Paulo's explicit command. Automations cannot use Claude Sonnet; automated Claude requires an explicit non-Sonnet model or must stay paused.
-
-## Prompt Caching
-
-- Read `/Users/paulopierrondi/Documents/Obsidian Vault/99_System/Prompt Caching Workflow Policy.md` before high-token, recurring or multi-agent work.
-- Structure prompts with a stable cacheable prefix first: Agent Hub rules, Paulo style, project context, gates, checklists and output schema.
-- Put dynamic task delta last: current request, date, live status, diffs, logs, search results and screenshots.
-- Never include secrets, `.env` values, cookies, private keys, provider variable dumps or `ROTATE_REQUIRED` values in a cacheable prefix.
-- Report `prompt_cache.strategy`, `prefix_version`, nonsecret cache key/tag and `cached_tokens` when the provider exposes it; use `cli-prefix-layout` with null token metrics when a CLI hides telemetry.
-
-## Mandatory Start Gate
-
-Before planning, editing, refactoring, reviewing, or debugging:
-- Read `/Users/paulopierrondi/Documents/Obsidian Vault/Home.md` when the local vault is accessible.
-- Read `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Profile/Paulo Pierrondi Profile.md` for Paulo's professional/personal context, response style, ServiceNow/Bradesco context and current priorities.
-- Read `/Users/paulopierrondi/Documents/Obsidian Vault/02_Projects/Projects Index.md` and the matching project note under `/Users/paulopierrondi/Documents/Obsidian Vault/02_Projects`.
-- Read `/Users/paulopierrondi/Documents/Obsidian Vault/03_AI-Chats/AI Chats Index.md` and any matching project AI history note when relevant.
-- Read `/Users/paulopierrondi/Documents/Obsidian Vault/99_System/AI Agent Vault Policy.md`.
-- Read `/Users/paulopierrondi/Documents/Obsidian Vault/99_System/Prompt Caching Workflow Policy.md` before building prompts, handoffs, automations, reports or agent contexts.
-- For multi-coder, background coder, automation, Antigravity, or work that continues later, read `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Coding/Agent Coder Integration OS.md` and create/update a handoff card under `/Users/paulopierrondi/Documents/Obsidian Vault/Hub_Agentes/06_Runtime/handoffs`.
-- Run `brain-linear-sync` or read `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Coding/Linear/Linear Git Sync Report.md` before choosing work.
-- For roadmap, bug, status, priority, release, sprint/cycle, automation, product planning or backlog cleanup, read `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Coding/Linear/Linear Git Development Tracking OS.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Coding/Linear/Linear Project Map.md`, and the matching Linear project/issue through the Linear connector when available.
-- Treat the Linear app connector as the live source of truth for projects, issues, statuses, labels, assignees, comments, cycles and project updates. The sync report is local Git metadata only.
-- Read `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Coding/Best Practices/Development Best Practices Hub.md` and relevant platform best-practice notes.
-- Read `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Coding/Checklists/Project Checklist Hub.md` and the relevant frontend/backend/platform/AI/security checklists.
-- For app, site, UI, visual flow, screenshot, iOS, Android or store work, read `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Coding/Best Practices/App Web Quality Best Practices.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Coding/Checklists/App Web Preflight Checklist.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Coding/Checklists/Screenshots Visual QA Checklist.md`, and the relevant web/iOS/Android preflight.
-- For iOS/App Store Connect/TestFlight/signing/IAP/APNS work, read `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Coding/Checklists/Apple Developer And App Store Connect Inventory.md` and `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Coding/Checklists/App Store Connect Upload Runbook.md` before asking for IDs, keys, CI values, provider env vars or running an upload.
-- For product, monetization, app ideas, revenue, pricing, growth or side-project prioritization, read `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Product/Product Revenue MOC.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Product/Nightly Opportunity Engine.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Product/App Ideas Revenue Backlog.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Product/App Refinement Backlog.md`, and `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Product/Nightly Opportunity Report.md`.
-- For marketing creative, social video, ElevenLabs, subtitles, LinkedIn, Shorts, TikTok, Instagram/Reels or pierrondi.dev work, read `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Marketing/Marketing MOC.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Marketing/Pierrondi.dev Creative Video OS.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Marketing/ElevenLabs Voice And Subtitle Workflow.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Marketing/Social Video Platform Specs 2026.md`, and `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Marketing/Creative QA Checklist.md`.
-- For Apple Ads / ASA, App Store paid acquisition, ASO, CPP, paid campaigns or app marketing tuning, read `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Marketing/App Marketing Intelligence OS.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Marketing/Apple Ads ASA Tuning Runbook.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Marketing/App Marketing Metrics Inventory.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Marketing/App Marketing Daily Tuning Report.md`, and `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Marketing/App Marketing Tuning Backlog.md`.
-- For Obsidian, second-brain, vault, agent-memory, MOC or automation improvements, read `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Second Brain/Second Brain Intelligence Loop.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/99_System/Second Brain Intelligence Report.md`, `/Users/paulopierrondi/Documents/Obsidian Vault/99_System/Claude Code Nightly Second Brain Routine.md`, and `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Second Brain/External Source Watchlist.md`.
-- For any automation, routine, scheduled job, cron, LaunchAgent, cloud runner or automatic follow-up, read `/Users/paulopierrondi/Documents/Obsidian Vault/99_System/Automation Email Policy.md` and send a completion email to `pierrondi@gmail.com`.
-- Read `/Users/paulopierrondi/Documents/Obsidian Vault/99_System/Security And Secrets Policy.md` before touching auth, APIs, env vars, API keys, tokens, deploy or production config.
-- For credentials, read `/Users/paulopierrondi/Documents/Obsidian Vault/99_System/Credential Vault Operating Model.md`: the vault stores inventory/references, never real secret values.
-- If credentials are in scope for `/Users/paulopierrondi/Documents/Obsidian Vault/99_System/Secret Exposure Incident - 2026-05-19.md`, require rotation before use and use Keychain/secret manager/provider env vars, never chat.
-- If Paulo uses `/Users/paulopierrondi/.second-brain-secrets.env` for bulk import, treat it as temporary staging outside the vault and delete it through `brain-secret-intake import ... --delete`.
-- For Railway projects, read `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Coding/Checklists/Railway Secrets Inventory.md` and use `brain-railway-run -- <command>` instead of asking Paulo to paste secrets.
-- Read `.brain/PROJECT_CONTEXT.md` if present. In cloud environments, treat `.brain/PROJECT_CONTEXT.md` and `.brain/CLAUDE_CLOUD_CONTEXT.md` as the available vault snapshot.
-
-## Multi-Agent Compatibility
-
-- `AGENTS.md` is the cross-agent contract for Codex and all local coders.
-- `CLAUDE.md`, `GEMINI.md` and `KIMI.md` must remain operationally equivalent to `AGENTS.md`; do not simplify one file and leave gates out of another.
-- Google Antigravity must read both `AGENTS.md` and `GEMINI.md`; if the vault is outside Antigravity Project folders, explicitly add the vault folder or use `.brain/PROJECT_CONTEXT.md` as the safe snapshot.
-- Active Background Coders: Kimi for broad scans/reports, Codex for patch/integration, Claude Code for complex/compliance, Gemini CLI for independent MCP/terminal validation, Google Antigravity for agent-first/browser/worktree/artifact orchestration.
-- Cursor Background Agent remains dormant unless Paulo explicitly activates it.
-
-## Hard Gates
-
-- Do not store real secrets in Markdown, Linear, chat, logs, screenshots, commits or email.
-- Never ask Paulo to paste API keys, tokens, passwords, cookies, OAuth credentials, private keys or production secrets in chat when a provider env var, Keychain, 1Password/op reference, `brain-secret-intake`, `brain-railway-run` or another secret manager path exists.
-- Do not bulk-close, archive, delete, relabel, reassign or move Linear issues without an explicit cleanup proposal and approval.
-- Do not push, merge, force-push, deploy, submit to App Store/TestFlight, change paid ads, publish social content, run production migrations, rotate secrets or change production config without Paulo's explicit command.
-
-## Mandatory Finish Gate
-
-After meaningful work:
-- Update the matching Obsidian project note with decisions, commands, files changed, risks, deploy state, and next steps.
-- Update the handoff card with status, evidence, tests, residual risk and next action when one exists.
-- Update Linear when issue reality changes; do not bulk-close/archive/relabel without a cleanup proposal.
-- Register screenshot/visual QA evidence paths when visual work changed, or record why screenshots were not captured.
-- Register creative/video assets, scriptId/renderId, caption files, platform variants and marketing learnings when relevant.
-- If the local vault is not accessible, update `.brain/SESSION_NOTES.md` with durable project knowledge that should later be synced back to Obsidian.
-- Never write secrets to Markdown. Redact API keys, tokens, passwords, cookies, OAuth credentials, private keys, and production secrets.
-- API keys belong in a secret manager or provider env vars. The vault stores only inventory: env var name, provider, scope, storage location, owner and rotation date.
-- Automation runs must send a final email to `pierrondi@gmail.com` with status, summary, updated reports, pending decisions and failures; redact secrets before sending.
-- If the session reveals a reusable development lesson, append it to `/Users/paulopierrondi/Documents/Obsidian Vault/04_Areas/Coding/Best Practices/Learning Inbox.md` or run `brain-learn`.
-<!-- OBSIDIAN_SECOND_BRAIN_END -->
