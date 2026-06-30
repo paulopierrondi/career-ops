@@ -1,0 +1,382 @@
+{
+  "generated_at": "2026-06-30T21:35:17.944Z",
+  "jobs": {
+    "latest_runs": [
+      {
+        "file": "reports/job-applications/2026-06-30-17-27-07-n8n-daily-us-ai-job-applications.json",
+        "status": "blocked",
+        "timestamp": "2026-06-30T20:27:07.503Z",
+        "submitted": 0,
+        "ready": 0,
+        "blocked": 3,
+        "approvalCount": 0,
+        "approvalQueue": "",
+        "processed": 3
+      },
+      {
+        "file": "reports/job-applications/2026-06-30-17-29-42-n8n-daily-us-ai-job-applications.json",
+        "status": "blocked",
+        "timestamp": "2026-06-30T20:29:42.928Z",
+        "submitted": 0,
+        "ready": 0,
+        "blocked": 3,
+        "approvalCount": 0,
+        "approvalQueue": "",
+        "processed": 3
+      },
+      {
+        "file": "reports/job-applications/2026-06-30-17-32-23-n8n-daily-us-ai-job-applications.json",
+        "status": "blocked",
+        "timestamp": "2026-06-30T20:32:23.786Z",
+        "submitted": 0,
+        "ready": 0,
+        "blocked": 20,
+        "approvalCount": 0,
+        "approvalQueue": "",
+        "processed": 20
+      },
+      {
+        "file": "reports/job-applications/2026-06-30-17-36-54-n8n-daily-us-ai-job-applications.json",
+        "status": "ready_for_submit",
+        "timestamp": "2026-06-30T20:36:54.856Z",
+        "submitted": 0,
+        "ready": 3,
+        "blocked": 0,
+        "approvalCount": 0,
+        "approvalQueue": "",
+        "processed": 4
+      },
+      {
+        "file": "reports/job-applications/2026-06-30-17-39-44-n8n-daily-us-ai-job-applications.json",
+        "status": "blocked",
+        "timestamp": "2026-06-30T20:39:44.705Z",
+        "submitted": 0,
+        "ready": 0,
+        "blocked": 8,
+        "approvalCount": 0,
+        "approvalQueue": "",
+        "processed": 8
+      },
+      {
+        "file": "reports/job-applications/2026-06-30-17-46-22-n8n-daily-us-ai-job-applications.json",
+        "status": "no_hit",
+        "timestamp": "2026-06-30T20:46:22.499Z",
+        "submitted": 0,
+        "ready": 0,
+        "blocked": 0,
+        "approvalCount": 0,
+        "approvalQueue": "",
+        "processed": 0
+      },
+      {
+        "file": "reports/job-applications/2026-06-30-17-46-37-n8n-daily-us-ai-job-applications.json",
+        "status": "ready_for_submit",
+        "timestamp": "2026-06-30T20:46:37.679Z",
+        "submitted": 0,
+        "ready": 2,
+        "blocked": 0,
+        "approvalCount": 0,
+        "approvalQueue": "",
+        "processed": 2
+      },
+      {
+        "file": "reports/job-applications/2026-06-30-18-12-14-n8n-daily-us-ai-job-applications.json",
+        "status": "ready_for_submit",
+        "timestamp": "2026-06-30T21:12:15.117Z",
+        "submitted": 0,
+        "ready": 1,
+        "blocked": 0,
+        "approvalCount": 1,
+        "approvalQueue": "reports/job-applications/approval-queue/2026-06-30T21-12-15-daily-us-ai-job-applications-approval-queue.md",
+        "processed": 1
+      },
+      {
+        "file": "reports/job-applications/2026-06-30-18-21-13-n8n-daily-us-ai-job-applications.json",
+        "status": "ready_for_submit",
+        "timestamp": "2026-06-30T21:21:14.058Z",
+        "submitted": 0,
+        "ready": 3,
+        "blocked": 0,
+        "approvalCount": 3,
+        "approvalQueue": "reports/job-applications/approval-queue/2026-06-30T21-21-14-daily-us-ai-job-applications-approval-queue.md",
+        "processed": 3
+      },
+      {
+        "file": "reports/job-applications/2026-06-30-18-25-57-n8n-daily-us-ai-job-applications.json",
+        "status": "ready_for_submit",
+        "timestamp": "2026-06-30T21:25:57.307Z",
+        "submitted": 0,
+        "ready": 3,
+        "blocked": 0,
+        "approvalCount": 3,
+        "approvalQueue": "reports/job-applications/approval-queue/2026-06-30T21-25-57-daily-us-ai-job-applications-approval-queue.md",
+        "processed": 3
+      },
+      {
+        "file": "reports/job-applications/2026-06-30-18-29-12-n8n-daily-us-ai-job-applications.json",
+        "status": "ready_for_submit",
+        "timestamp": "2026-06-30T21:29:12.427Z",
+        "submitted": 0,
+        "ready": 1,
+        "blocked": 0,
+        "approvalCount": 1,
+        "approvalQueue": "reports/job-applications/approval-queue/2026-06-30T21-29-12-daily-us-ai-job-applications-approval-queue.md",
+        "processed": 1
+      },
+      {
+        "file": "reports/job-applications/2026-06-30-18-31-52-n8n-daily-us-ai-job-applications.json",
+        "status": "ready_for_submit",
+        "timestamp": "2026-06-30T21:31:52.775Z",
+        "submitted": 0,
+        "ready": 1,
+        "blocked": 0,
+        "approvalCount": 1,
+        "approvalQueue": "reports/job-applications/approval-queue/2026-06-30T21-31-52-daily-us-ai-job-applications-approval-queue.md",
+        "processed": 1
+      }
+    ],
+    "submitted_total_recent": 0,
+    "ready_total_recent": 14,
+    "approval_items": [
+      {
+        "file": "reports/job-applications/approval-queue/2026-06-30T21-12-15-daily-us-ai-job-applications-approval-queue.json",
+        "company": "Evaluation: Parloa",
+        "role": "Enterprise Account Executive - Turkey",
+        "status": "ready_for_submit",
+        "score": 4.2,
+        "unresolvedFields": [
+          "Country",
+          "When would you be able to start a new job? Or what is your notice period?",
+          "Where would you like to work from?",
+          "Unlabeled text field; inspect screenshot",
+          "Will you require relocation?",
+          "Do you require visa sponsorship?"
+        ],
+        "action": "Review unresolved required fields in the ATS, confirm legal/work-auth details, then manually submit only if acceptable.",
+        "evidence": "reports/application-screenshots/2026-06-30T21-12-15-evaluation-parloa-enterprise-account-executive-turkey-before-submit.png"
+      },
+      {
+        "file": "reports/job-applications/approval-queue/2026-06-30T21-21-14-daily-us-ai-job-applications-approval-queue.json",
+        "company": "Evaluation: Parloa",
+        "role": "Enterprise Account Executive - Turkey",
+        "status": "ready_for_submit",
+        "score": 4.3,
+        "unresolvedFields": [
+          "Country",
+          "When would you be able to start a new job? Or what is your notice period?",
+          "Where would you like to work from?",
+          "Unlabeled text field; inspect screenshot",
+          "Will you require relocation?",
+          "Do you require visa sponsorship?"
+        ],
+        "action": "Review unresolved required fields in the ATS, confirm legal/work-auth details, then manually submit only if acceptable.",
+        "evidence": "reports/application-screenshots/2026-06-30T21-21-14-evaluation-parloa-enterprise-account-executive-turkey-before-submit.png"
+      },
+      {
+        "file": "reports/job-applications/approval-queue/2026-06-30T21-21-14-daily-us-ai-job-applications-approval-queue.json",
+        "company": "Evaluation: Parloa",
+        "role": "Operations Manager, Solution Engineering & Services",
+        "status": "ready_for_submit",
+        "score": 4.3,
+        "unresolvedFields": [
+          "Country",
+          "When would you be able to start a new job? Or what is your notice period?",
+          "Are you able to come into our NYC office 2/3 x a week?",
+          "Unlabeled text field; inspect screenshot",
+          "Will you require relocation?",
+          "Do you require visa sponsorship?"
+        ],
+        "action": "Review unresolved required fields in the ATS, confirm legal/work-auth details, then manually submit only if acceptable.",
+        "evidence": "reports/application-screenshots/2026-06-30T21-21-14-evaluation-parloa-operations-manager-solution-engineering-services-before-submit.png"
+      },
+      {
+        "file": "reports/job-applications/approval-queue/2026-06-30T21-21-14-daily-us-ai-job-applications-approval-queue.json",
+        "company": "Evaluation: Parloa",
+        "role": "GTM Engineer",
+        "status": "ready_for_submit",
+        "score": 4.3,
+        "unresolvedFields": [
+          "In one sentence: What’s an internal tool or automation you built that people actually used?",
+          "Where are you currently located?",
+          "Will you now or in the future require sponsorship for employment visa status (e.g.",
+          "H-1B",
+          "O-1",
+          "etc.) to work in the United States?",
+          "Unlabeled text field; inspect screenshot",
+          "Do you consent to the processing of my personal data for recruitment purposes in accordance with the company's privacy policy?"
+        ],
+        "action": "Review unresolved required fields in the ATS, confirm legal/work-auth details, then manually submit only if acceptable.",
+        "evidence": "reports/application-screenshots/2026-06-30T21-21-14-evaluation-parloa-gtm-engineer-before-submit.png"
+      },
+      {
+        "file": "reports/job-applications/approval-queue/2026-06-30T21-25-57-daily-us-ai-job-applications-approval-queue.json",
+        "company": "Evaluation: Parloa",
+        "role": "Operations Manager, Solution Engineering & Services",
+        "status": "ready_for_submit",
+        "score": 4.2,
+        "unresolvedFields": [
+          "Country",
+          "When would you be able to start a new job? Or what is your notice period?",
+          "Are you able to come into our NYC office 2/3 x a week?",
+          "Unlabeled text field; inspect screenshot",
+          "Will you require relocation?",
+          "Do you require visa sponsorship?"
+        ],
+        "action": "Review unresolved required fields in the ATS, confirm legal/work-auth details, then manually submit only if acceptable.",
+        "evidence": "reports/application-screenshots/2026-06-30T21-25-57-evaluation-parloa-operations-manager-solution-engineering-services-before-submit.png"
+      },
+      {
+        "file": "reports/job-applications/approval-queue/2026-06-30T21-25-57-daily-us-ai-job-applications-approval-queue.json",
+        "company": "Evaluation: Parloa",
+        "role": "GTM Engineer",
+        "status": "ready_for_submit",
+        "score": 4.2,
+        "unresolvedFields": [
+          "Where are you currently located?",
+          "Will you now or in the future require sponsorship for employment visa status (e.g.",
+          "H-1B",
+          "O-1",
+          "etc.) to work in the United States?",
+          "Unlabeled text field; inspect screenshot",
+          "Do you consent to the processing of my personal data for recruitment purposes in accordance with the company's privacy policy?"
+        ],
+        "action": "Review unresolved required fields in the ATS, confirm legal/work-auth details, then manually submit only if acceptable.",
+        "evidence": "reports/application-screenshots/2026-06-30T21-25-57-evaluation-parloa-gtm-engineer-before-submit.png"
+      },
+      {
+        "file": "reports/job-applications/approval-queue/2026-06-30T21-25-57-daily-us-ai-job-applications-approval-queue.json",
+        "company": "Evaluation: Parloa",
+        "role": "Lead Agent Architect - SAP",
+        "status": "ready_for_submit",
+        "score": 4.2,
+        "unresolvedFields": [
+          "Country",
+          "When building AI agents that rely on external systems like SAP",
+          "how do you ensure reliable and predictable behavior when API responses are slow",
+          "incomplete",
+          "or fail (e.g.",
+          "authorization issues",
+          "partial data",
+          "latency)?",
+          "Where are you currently located?",
+          "Are you willing to relocate for this role",
+          "if required?",
+          "Unlabeled text field; inspect screenshot",
+          "Will you now or in the future require sponsorship for employment visa status (e.g.",
+          "H-1B",
+          "O-1",
+          "etc.) to work in the United States?",
+          "Do you consent to the processing of my personal data for recruitment purposes in accordance with the company's privacy policy?"
+        ],
+        "action": "Review unresolved required fields in the ATS, confirm legal/work-auth details, then manually submit only if acceptable.",
+        "evidence": "reports/application-screenshots/2026-06-30T21-25-57-evaluation-parloa-lead-agent-architect-sap-before-submit.png"
+      },
+      {
+        "file": "reports/job-applications/approval-queue/2026-06-30T21-29-12-daily-us-ai-job-applications-approval-queue.json",
+        "company": "Evaluation: Parloa",
+        "role": "Operations Manager, Solution Engineering & Services",
+        "status": "ready_for_submit",
+        "score": 4.2,
+        "unresolvedFields": [
+          "Are you able to come into our NYC office 2/3 x a week?",
+          "Unlabeled text field; inspect screenshot",
+          "How do you identify?",
+          "Please confirm that you have read our GDPR statement."
+        ],
+        "action": "Review unresolved required fields in the ATS, confirm legal/work-auth details, then manually submit only if acceptable.",
+        "evidence": "reports/application-screenshots/2026-06-30T21-29-12-evaluation-parloa-operations-manager-solution-engineering-services-before-submit.png"
+      },
+      {
+        "file": "reports/job-applications/approval-queue/2026-06-30T21-31-52-daily-us-ai-job-applications-approval-queue.json",
+        "company": "Evaluation: Parloa",
+        "role": "Operations Manager, Solution Engineering & Services",
+        "status": "ready_for_submit",
+        "score": 4.3,
+        "unresolvedFields": [
+          "Are you able to come into our NYC office 2/3 x a week?",
+          "Unlabeled text field; inspect screenshot"
+        ],
+        "action": "Review unresolved required fields in the ATS, confirm legal/work-auth details, then manually submit only if acceptable.",
+        "evidence": "reports/application-screenshots/2026-06-30T21-31-52-evaluation-parloa-operations-manager-solution-engineering-services-before-submit.png"
+      }
+    ]
+  },
+  "freelance": {
+    "submittedHistorical": 147,
+    "n8nRuns": [
+      {
+        "file": "reports/freelance/2026-06-30-15-52-03-n8n-freelance-mail-radar.json",
+        "timestamp": "",
+        "checked": 6,
+        "actionable": 0,
+        "drafts": 0,
+        "submissionAllowed": false
+      },
+      {
+        "file": "reports/freelance/2026-06-30-16-03-04-n8n-freelance-mail-radar.json",
+        "timestamp": "",
+        "checked": 6,
+        "actionable": 0,
+        "drafts": 0,
+        "submissionAllowed": false
+      },
+      {
+        "file": "reports/freelance/2026-06-30-16-20-02-n8n-freelance-mail-radar.json",
+        "timestamp": "",
+        "checked": 0,
+        "actionable": 0,
+        "drafts": 0,
+        "submissionAllowed": false
+      },
+      {
+        "file": "reports/freelance/2026-06-30-16-20-39-n8n-freelance-mail-radar.json",
+        "timestamp": "",
+        "checked": 0,
+        "actionable": 0,
+        "drafts": 0,
+        "submissionAllowed": false
+      },
+      {
+        "file": "reports/freelance/2026-06-30-16-21-04-n8n-freelance-mail-radar.json",
+        "timestamp": "",
+        "checked": 0,
+        "actionable": 0,
+        "drafts": 0,
+        "submissionAllowed": false
+      },
+      {
+        "file": "reports/freelance/2026-06-30-16-21-13-n8n-freelance-mail-radar.json",
+        "timestamp": "",
+        "checked": 0,
+        "actionable": 0,
+        "drafts": 0,
+        "submissionAllowed": false
+      },
+      {
+        "file": "reports/freelance/2026-06-30-17-48-39-n8n-freelance-mail-radar.json",
+        "timestamp": "",
+        "checked": 0,
+        "actionable": 0,
+        "drafts": 0,
+        "submissionAllowed": false
+      },
+      {
+        "file": "reports/freelance/2026-06-30-18-33-04-n8n-freelance-mail-radar.json",
+        "timestamp": "",
+        "checked": 0,
+        "actionable": 0,
+        "drafts": 0,
+        "submissionAllowed": false
+      }
+    ],
+    "dashboardHtml": "reports/freelance/dashboard/index.html",
+    "dashboardJson": "reports/freelance/dashboard/freelance-activity-dashboard.json"
+  },
+  "gates": {
+    "service_now_brazil_blocked": true,
+    "elevenlabs_blocked": true,
+    "freelance_auto_submit_allowed": false,
+    "payments_boosts_credits_allowed": false,
+    "login_captcha_2fa_bypass_allowed": false
+  }
+}

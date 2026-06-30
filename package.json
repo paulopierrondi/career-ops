@@ -48,6 +48,7 @@
     "n8n:ollama:self-test": "node ops/n8n/ollama-codex-bridge.mjs --self-test",
     "jobs:autopilot": "node scripts/job-application-autopilot.mjs",
     "freelance:dashboard": "node scripts/build-freelance-activity-dashboard.mjs",
+    "dashboard:ops": "node scripts/build-operations-dashboard.mjs",
     "gemini:eval": "node gemini-eval.mjs",
     "ollama:eval": "node ollama-eval.mjs",
     "openai:eval": "node openai-eval.mjs",

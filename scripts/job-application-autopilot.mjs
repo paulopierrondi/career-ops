@@ -53,6 +53,7 @@ const SETTINGS = {
   mailEnabled: boolEnv('N8N_JOB_APPLICATION_MAIL_ENABLED', true),
   submitMode: submitModeEnv(),
   legalAck: boolEnv('N8N_JOB_APPLICATION_LEGAL_ACK_VAI', false),
+  eeoDecline: boolEnv('N8N_JOB_APPLICATION_EEO_DECLINE_VAI', false),
   headed: boolEnv('N8N_JOB_APPLICATION_HEADED', true),
   livenessEnabled: boolEnv('N8N_JOB_APPLICATION_LIVENESS_ENABLED', true),
   maxAttempts: numberEnv(
@@ -989,10 +990,13 @@ function validateAutoSubmitCriteria(packageInfo, pageText, profile) {
   if (/(payment required|enter payment|payment method|credit card|billing information|paid credits?|subscription required|application fee|fee to apply|job board boost|boost this application|upgrade plan)/.test(lower)) {
     issues.push('browser page contains payment/account-upgrade gate text');
   }
-  if (/background check|criminal history|\bsignature\b|e-sign|attestation|arbitration|class action|i acknowledge|certif(y|ication)/.test(lower)) {
-    issues.push('legal/background/signature/attestation text requires Paulo approval');
+  if (/background check|criminal history|\bsignature\b|e-sign|attestation/.test(lower)) {
+    issues.push('background/signature/attestation text requires Paulo approval');
   }
-  if (/race|ethnicity|gender|veteran|disability|demographic|eeo/.test(lower)) {
+  if (!SETTINGS.legalAck && /arbitration|class action|i acknowledge|certif(y|ication)|legal agreement|privacy policy|processing of.*personal data/.test(lower)) {
+    issues.push('legal/privacy acknowledgement text requires Paulo approval');
+  }
+  if (!SETTINGS.eeoDecline && /race|ethnicity|gender|veteran|disability|demographic|eeo/.test(lower)) {
     issues.push('demographic/EEO section present; Paulo approval required');
   }
   return { ok: issues.length === 0, issues };
@@ -1029,10 +1033,145 @@ async function fillCommonFields(page, candidate, packageInfo, answers) {
   await fillInputByHint(page, /(location|address|city)/i, candidate.location);
   await fillInputByHint(page, /(salary|compensation|pay|ote|expectation)/i, compensationAnswer);
   await fillTextareaByHint(page, /(salary|compensation|pay|ote|expectation)/i, compensationAnswer);
+  await fillKnownRequiredFields(page, candidate, profile, answers);
 
   await clickBinaryByQuestion(page, /(authorized|authorised).*united states|legally.*work.*u\.?s\.?/i, 'No');
   await clickBinaryByQuestion(page, /(sponsor|sponsorship|visa).*now|future.*sponsor|require.*sponsor/i, 'Yes');
   await clickBinaryByQuestion(page, /(relocat|onsite|office|hybrid)/i, 'Yes');
+  await clickBinaryByQuestion(page, /(nyc|new york).*office|office.*2\/3|come into.*office/i, 'No');
+  if (SETTINGS.legalAck) {
+    await clickConsentCheckboxes(page);
+  }
+  if (SETTINGS.eeoDecline) {
+    await chooseDeclineForDemographics(page);
+  }
+}
+
+async function fillKnownRequiredFields(page, candidate, profile, answers) {
+  const free = answers.free_text || {};
+  const values = {
+    country: profile?.location?.country || 'Brazil',
+    location: candidate.location,
+    notice: 'Available after an agreed notice period; exact start date can be aligned with the hiring team.',
+    workFrom: 'Brazil-based/remote today; open to relocation or regular onsite cadence with employer-supported sponsorship or transfer path.',
+    sponsorship: 'Yes, sponsorship or a credible internal transfer path is required for US roles.',
+    relocation: 'Yes, for the right senior AI/GTM role with employer-supported relocation path.',
+    internalTool: 'Built and used Career Ops: a local multi-agent automation pipeline that scans AI/GTM roles, evaluates fit, generates tailored CV/cover/answer packs, captures browser evidence, preserves human gates, and produces approval dashboards.',
+    consent: SETTINGS.legalAck ? 'Yes' : '',
+    portfolio: candidate.portfolio,
+    whyRole: free.relevant_experience || free.why_role || '',
+  };
+  await page.evaluate((values) => {
+    const norm = (value) => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const visible = (el) => {
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none' && !el.disabled;
+    };
+    const contextFor = (el) => {
+      const label = el.id ? document.querySelector(`[for="${CSS.escape(el.id)}"]`)?.innerText || '' : '';
+      const ancestors = [];
+      let current = el.parentElement;
+      for (let depth = 0; current && depth < 6; depth += 1, current = current.parentElement) {
+        ancestors.push(current.innerText || '');
+      }
+      return norm(`${label} ${el.name || ''} ${el.id || ''} ${el.placeholder || ''} ${ancestors.join(' ')}`);
+    };
+    const setControlValue = (el, value) => {
+      const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype
+        : (el.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype);
+      const descriptor = Object.getOwnPropertyDescriptor(proto, 'value');
+      if (descriptor?.set) descriptor.set.call(el, value);
+      else el.value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+      el.dispatchEvent(new Event('blur', { bubbles: true }));
+    };
+    const answerFor = (context) => {
+      if (/country/.test(context)) return values.country;
+      if (/start|notice period|able to start/.test(context)) return values.notice;
+      if (/where.*work|work from/.test(context)) return values.workFrom;
+      if (/currently located|current location|where are you currently located|location/.test(context)) return values.location;
+      if (/internal tool|automation.*built|people actually used/.test(context)) return values.internalTool;
+      if (/visa|sponsor|sponsorship/.test(context)) return values.sponsorship;
+      if (/relocat/.test(context)) return values.relocation;
+      if (/gdpr|privacy|data.*processing|read.*gdpr|gdpr statement/.test(context)) return values.consent || 'Yes';
+      if (/how do you identify|gender identity|identity/.test(context)) return 'decline';
+      if (/linkedin/.test(context)) return '';
+      if (/website|portfolio/.test(context)) return values.portfolio;
+      if (/why|relevant|experience|additional/.test(context)) return values.whyRole;
+      return '';
+    };
+    const optionScore = (text, answer) => {
+      const t = norm(text);
+      const a = norm(answer);
+      if (!t || !a) return 0;
+      if (a === 'brazil' && /brazil|brasil/.test(t)) return 10;
+      if (/yes/.test(a) && /^yes\b|^sim\b/.test(t)) return 10;
+      if (/no/.test(a) && /^no\b|^nao\b|^não\b/.test(t)) return 10;
+      if (t.includes(a) || a.includes(t)) return 8;
+      return 0;
+    };
+    for (const el of [...document.querySelectorAll('input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]), textarea')]) {
+      if (!visible(el) || el.value) continue;
+      const value = answerFor(contextFor(el));
+      if (value) setControlValue(el, String(value).slice(0, el.maxLength > 0 ? el.maxLength : 900));
+    }
+    for (const el of [...document.querySelectorAll('select')]) {
+      if (!visible(el) || el.value) continue;
+      const context = contextFor(el);
+      let answer = answerFor(context);
+      if (/race|ethnicity|gender|veteran|disability|demographic|eeo|how do you identify|gender identity/.test(context)) answer = 'decline';
+      if (!answer) continue;
+      let best = null;
+      let bestScore = 0;
+      for (const option of [...el.options]) {
+        let score = optionScore(option.text, answer);
+        if (/decline|prefer not|not disclose|do not wish|don't wish/i.test(option.text)
+          && /race|ethnicity|gender|veteran|disability|demographic|eeo|how do you identify|gender identity/.test(context)) {
+          score = 10;
+        }
+        if (/^yes\b|^sim\b|read|confirm/i.test(option.text)
+          && /gdpr|privacy|data.*processing|statement/.test(context)) {
+          score = 10;
+        }
+        if (score > bestScore) {
+          best = option;
+          bestScore = score;
+        }
+      }
+      if (best) {
+        setControlValue(el, best.value);
+      }
+    }
+    const clickRadioInContext = (questionRe, answerRe) => {
+      for (const input of [...document.querySelectorAll('input[type="radio"]')]) {
+        if (!visible(input) || input.checked) continue;
+        const context = contextFor(input);
+        const label = input.id ? document.querySelector(`[for="${CSS.escape(input.id)}"]`)?.innerText || '' : '';
+        const text = norm(`${label} ${input.value || ''} ${input.getAttribute('aria-label') || ''}`);
+        if (questionRe.test(context) && answerRe.test(text)) {
+          input.click();
+          return true;
+        }
+      }
+      return false;
+    };
+    clickRadioInContext(/visa|sponsor|sponsorship/, /^yes\b|^sim\b/);
+    clickRadioInContext(/relocat/, /^yes\b|^sim\b/);
+    clickRadioInContext(/nyc|new york|office.*2\/3|come into.*office/, /^no\b|^nao\b|^não\b/);
+    clickRadioInContext(/authorized|authorised|legally.*work.*u\.?s\.?/, /^no\b|^nao\b|^não\b/);
+    if (values.consent) {
+      for (const checkbox of [...document.querySelectorAll('input[type="checkbox"]')]) {
+        if (!visible(checkbox) || checkbox.checked) continue;
+        const context = contextFor(checkbox);
+        if (/(consent|privacy policy|processing of.*personal data|lgpd|gdpr|acknowledge|certify|agree)/.test(context)
+          && !/(background check|arbitration|class action|signature|e-sign)/.test(context)) {
+          checkbox.click();
+        }
+      }
+    }
+  }, values).catch(() => {});
 }
 
 async function fillFirst(page, selectors, value) {
@@ -1127,10 +1266,36 @@ async function chooseDeclineForDemographics(page) {
   const decline = /(decline|prefer not|don't wish|do not wish|not disclose)/i;
   await page.evaluate(({ source, flags }) => {
     const re = new RegExp(source, flags);
+    for (const select of [...document.querySelectorAll('select')]) {
+      const context = `${select.name || ''} ${select.id || ''} ${select.closest('label, fieldset, div')?.innerText || ''}`.replace(/\s+/g, ' ');
+      if (!/race|ethnicity|gender|veteran|disability|demographic|eeo/i.test(context)) continue;
+      const option = [...select.options].find((item) => re.test(item.text || item.value || ''));
+      if (option) {
+        select.value = option.value;
+        select.dispatchEvent(new Event('input', { bubbles: true }));
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
+  }, { source: decline.source, flags: decline.flags }).catch(() => {});
+  await page.evaluate(({ source, flags }) => {
+    const re = new RegExp(source, flags);
     const controls = [...document.querySelectorAll('button, label, option')]
       .filter((el) => re.test((el.innerText || el.value || '').trim()));
     for (const control of controls.slice(0, 12)) control.click();
   }, { source: decline.source, flags: decline.flags }).catch(() => {});
+}
+
+async function clickConsentCheckboxes(page) {
+  await page.evaluate(() => {
+    const consentRe = /(consent|privacy policy|processing of.*personal data|lgpd|gdpr|acknowledge|certify|agree)/i;
+    for (const checkbox of [...document.querySelectorAll('input[type="checkbox"]')]) {
+      const label = checkbox.id ? document.querySelector(`[for="${CSS.escape(checkbox.id)}"]`)?.innerText || '' : '';
+      const context = `${label} ${checkbox.name || ''} ${checkbox.id || ''} ${checkbox.closest('label, div')?.innerText || ''}`.replace(/\s+/g, ' ');
+      if (consentRe.test(context) && !/background check|arbitration|class action|signature|e-sign/i.test(context)) {
+        checkbox.click();
+      }
+    }
+  }).catch(() => {});
 }
 
 async function safeBodyText(page) {
