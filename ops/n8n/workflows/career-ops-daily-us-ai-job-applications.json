@@ -1,0 +1,217 @@
+{
+  "id": "careerops-daily-us-ai-job-applications",
+  "name": "Career Ops - Daily US AI Job Applications",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Career Ops - Daily US AI Job Applications\n\nRuns once per day. Searches US-first AI GTM / Client Director / Sales / Account Executive roles, reads recent Gmail job alerts through the local Google Mail account when available, generates CV + cover + answer packages, writes an approval queue under reports/job-applications/approval-queue/, and defaults to READY_FOR_SUBMIT.\n\nExecution prompt: `ops/n8n/job-application-execution-prompt.md`.\n\nStanding authorization: Paulo approved daily search, scoring, package generation and safe form preparation. Final submit is only automatic when `SUBMIT_MODE=auto_submit_low_risk` and every low-risk criterion passes. Otherwise the runner returns ready_for_submit/draft_ready/blocked, exposes approval_queue_path, and sends Paulo an approval email.",
+        "height": 360,
+        "width": 780,
+        "color": 4
+      },
+      "id": "sticky-contract",
+      "name": "Operating contract",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        -280
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -580,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 24
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 24 hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -580,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18766/run",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-career-ops-token",
+              "value": "={{ $env.CAREER_OPS_N8N_BRIDGE_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10800000
+        }
+      },
+      "id": "run-autopilot",
+      "name": "Run safe local job bridge",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -220,
+        210
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $json.result ?? $json.parsed ?? $json;\nreturn [{ json: { ...result, bridge_ok: $json.ok ?? null, bridge_status: $json.status ?? null, bridge_stderr_tail: $json.stderr_tail ?? null } }];"
+      },
+      "id": "parse-result",
+      "name": "Parse job result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        210
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "submitted-check",
+              "leftValue": "={{ Number($json.submitted_count || 0) }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "larger"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "has-submit",
+      "name": "Submitted anything?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        380,
+        210
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "submitted-output",
+      "name": "Submitted",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        700,
+        120
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "no-submit-output",
+      "name": "No submit / ready / blocked",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        700,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Manual run": {
+      "main": [
+        [
+          {
+            "node": "Run safe local job bridge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 24 hours": {
+      "main": [
+        [
+          {
+            "node": "Run safe local job bridge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run safe local job bridge": {
+      "main": [
+        [
+          {
+            "node": "Parse job result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse job result": {
+      "main": [
+        [
+          {
+            "node": "Submitted anything?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Submitted anything?": {
+      "main": [
+        [
+          {
+            "node": "Submitted",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No submit / ready / blocked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

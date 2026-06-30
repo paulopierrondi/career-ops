@@ -5,7 +5,7 @@ Use only inside Upwork. Do not share off-platform contact details or ask the cli
 ## Short Proof Line
 
 ```text
-I build AI automation and agent operating systems around governance, validation, human handoff and measurable business outcomes. Public proof of the way I approach this: https://agenticoscore.ai
+I build AI automation and operator systems around governance, validation, human handoff and measurable business outcomes. Recent proof assets: AgentOps Deal Desk, an AI opportunity dashboard submitted on Contra (https://contra.com/community/tlA4CSqw-ai-powered-dashboard-for-freelance-deal-management?r=paulo_pierrondi_1uqsgkcf&referralExperimentNid=DEFAULT_REFERRAL_PROGRAM), and AgenticosCore, a productized RevOps system (https://agenticoscore.ai).
 ```
 
 ## AI Automation / Privacy Advisor
@@ -45,7 +45,7 @@ For a first milestone, I would keep it tight:
 4. add logs, test cases, and fallback behavior;
 5. hand over a short runbook and phase-2 backlog.
 
-Relevant proof: I build productized AI/automation systems around CRM, revenue operations, workflow governance, human approval gates and measurable handoff. Public example of how I structure this kind of work: https://agenticoscore.ai
+Relevant proof: I recently submitted AgentOps Deal Desk on Contra, an AI-assisted dashboard that ranks opportunities by win score, urgency, budget, readiness and risk, then turns that into proposal angles, bid ranges and delivery checklists. I also built AgenticosCore, a productized RevOps system around diagnostics, CRM workflows, human approval gates and KPI cockpit.
 
 I would suggest starting with a fixed first milestone of ${{milestone_price}} over {{timeline}} days. If that slice works cleanly, we can move into the full implementation or ongoing support with much less risk.
 
@@ -62,6 +62,20 @@ Default first milestone:
 $450-$750 over 2-4 days for CRM/API/n8n workflow slice.
 $650-$1,200 over 3-5 days for RAG/agent proof.
 $40-$55/hr for first Upwork review acquisition on hourly jobs, unless the client is enterprise/high-complexity.
+```
+
+## Pilot Menu Add-on
+
+Use when a client wants an ongoing AI automation partner but the scope is broad:
+
+```text
+To keep this practical, I would start with one of three capped pilots:
+
+1. Automation diagnostic and hardening sprint: map the workflow, identify failure points, and deliver a prioritized implementation plan with one quick fix.
+2. Workflow build sprint: implement one n8n/Make/API/CRM workflow slice with logs, fallback behavior and a runbook.
+3. RAG/API integration sprint: build a small working proof with structured output, evaluation questions and handoff notes.
+
+That gives you visible output before committing to a larger engagement.
 ```
 
 ## Content Automation

@@ -1,0 +1,221 @@
+{
+  "name": "Career Ops - Ollama Codex Gemini Supervisor",
+  "id": "careerops-ollama-codex-supervisor",
+  "active": true,
+  "nodes": [
+    {
+      "id": "sticky-contract",
+      "name": "Operating contract",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -680,
+        -280
+      ],
+      "parameters": {
+        "content": "## Career Ops - Ollama Codex/Gemini Supervisor\n\nn8n is the automation surface. Paulo's local Ollama model is the first intelligence layer. It reviews the latest local automation outputs hourly, then decides whether to queue or call Codex/Gemini.\n\nEndpoint: `http://127.0.0.1:18767/triage-latest`.\n\nDefault mode: queue-only. `N8N_OLLAMA_CODEX_AUTORUN=false` and `N8N_OLLAMA_GEMINI_AUTORUN=false` mean neither Codex nor Gemini runs automatically.\n\nRouting: Codex is for local patches/tests/integration. Gemini API is last-resort/report-only and requires an explicit fallback reason. Workspace-write autorun is Codex-only and additionally requires `N8N_OLLAMA_CODEX_ALLOW_WORKSPACE_WRITE=true` plus low-risk Ollama triage.\n\nHard gates remain active: no secrets, push, merge, deploy, production, paid ads, App Store/TestFlight, social publishing, migrations, force push, secret rotation, bulk Linear changes, proposal submission, credit spend, boost, platform messaging, login/CAPTCHA/2FA bypass, payment or profile changes without Paulo approval.",
+        "height": 420,
+        "width": 860,
+        "color": 4
+      }
+    },
+    {
+      "id": "manual-trigger",
+      "name": "Manual supervisor run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -580,
+        160
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "schedule-trigger",
+      "name": "Every hour",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -580,
+        320
+      ],
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 1
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "ask-ollama",
+      "name": "Ask local Ollama supervisor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -220,
+        160
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18767/triage-latest",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-career-ops-token",
+              "value": "={{ $env.CAREER_OPS_N8N_BRIDGE_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"requested_by\": \"n8n-ollama-codex-supervisor\",\n  \"instruction\": \"Review latest n8n outputs and queue or run the smallest safe Codex follow-up. Preserve every human gate.\"\n}",
+        "options": {
+          "timeout": 180000
+        }
+      }
+    },
+    {
+      "id": "parse-supervisor",
+      "name": "Parse supervisor decision",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        100,
+        160
+      ],
+      "parameters": {
+        "jsCode": "const analysis = $json.analysis || {};\nconst taskFiles = $json.task_files || {};\nconst codex = $json.codex || {};\nconst gemini = $json.gemini || {};\nreturn [{ json: { ok: $json.ok, status: $json.status, action: analysis.action || 'none', executor: analysis.executor || 'none', risk: analysis.risk || 'unknown', requires_paulo_approval: analysis.requires_paulo_approval ?? true, summary: analysis.summary || '', executor_task: analysis.codex_task || '', task_md: taskFiles.mdPath || null, task_json: taskFiles.jsonPath || null, codex_ran: codex.ran || false, codex_ok: codex.ok ?? null, codex_reason: codex.reason || null, gemini_ran: gemini.ran || false, gemini_ok: gemini.ok ?? null, gemini_reason: gemini.reason || null, gemini_report_path: gemini.report_path || null } }];"
+      }
+    },
+    {
+      "id": "needs-codex",
+      "name": "Codex follow-up created?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        420,
+        160
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "action-check",
+              "leftValue": "={{ $json.action }}",
+              "rightValue": "none",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "codex-task-output",
+      "name": "Codex task queued or run",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        760,
+        80
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "nothing-output",
+      "name": "No follow-up needed",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        760,
+        260
+      ],
+      "parameters": {}
+    }
+  ],
+  "connections": {
+    "Manual supervisor run": {
+      "main": [
+        [
+          {
+            "node": "Ask local Ollama supervisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every hour": {
+      "main": [
+        [
+          {
+            "node": "Ask local Ollama supervisor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ask local Ollama supervisor": {
+      "main": [
+        [
+          {
+            "node": "Parse supervisor decision",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse supervisor decision": {
+      "main": [
+        [
+          {
+            "node": "Codex follow-up created?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Codex follow-up created?": {
+      "main": [
+        [
+          {
+            "node": "Codex task queued or run",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No follow-up needed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "pinData": {},
+  "versionId": "careerops-ollama-codex-supervisor-v1"
+}

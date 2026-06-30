@@ -14,6 +14,33 @@ Core message:
 
 ## Portfolio Items
 
+### AgentOps Deal Desk - AI Opportunity Dashboard
+
+Public Contra post: `https://contra.com/community/tlA4CSqw-ai-powered-dashboard-for-freelance-deal-management?r=paulo_pierrondi_1uqsgkcf&referralExperimentNid=DEFAULT_REFERRAL_PROGRAM`
+Bubble preview: `https://pierrondi.bubbleapps.io/version-test`
+
+Short PT-BR:
+
+Dashboard criado para transformar oportunidades soltas de freelas/consultoria em uma fila priorizada de acao. O sistema organiza cada oportunidade por score de ganho, urgencia, budget, prontidao e risco, e traduz isso em angulo de proposta, faixa de preco, checklist de entrega e proximo passo comercial. Foi submetido no desafio Contra `Prompt & Circumstance` com baseline Bubble AI, video demo e prova publica.
+
+Short EN:
+
+AI-assisted opportunity dashboard that turns scattered freelance and consulting leads into a ranked action pipeline. It scores each deal by win probability, urgency, budget, readiness and risk, then converts that signal into a proposal angle, bid range, delivery checklist and next commercial move. Submitted to Contra's `Prompt & Circumstance` challenge with Bubble AI baseline proof, demo video and public post.
+
+Skills:
+
+- AI dashboard/product UX
+- Opportunity scoring
+- RevOps / deal desk workflow
+- Proposal and pricing systems
+- No-code/low-code prototyping
+- Demo video and challenge submission packaging
+- Bubble AI baseline + product refinement
+
+Use when applying to:
+
+- AI dashboards, RevOps copilots, internal tools, opportunity scoring, CRM/pipeline automation, productivity dashboards, no-code MVPs, Bubble/low-code prototypes and operator-assistant tools.
+
 ### AgenticosCore - Revenue Operations com IA para B2B
 
 Public URL: `https://agenticoscore.ai`
@@ -102,6 +129,7 @@ Minha diferenca e que eu nao vendo apenas "um chatbot". Eu desenho e entrego a o
 Produtos proprios que demonstram execucao real:
 
 - AgenticosCore: Revenue Operations com IA para B2B, incluindo diagnostico, CRM, playbooks, follow-up, gates humanos e cockpit de KPIs.
+- AgentOps Deal Desk: dashboard submetido no Contra para priorizar oportunidades, score de ganho, bid range, checklist de entrega e proximo passo comercial.
 - CantuStudio: app de IA musical para harmonizacao coral SATB, com backend, validacao musical, playback e exportacao MusicXML/MIDI/PDF.
 - FaithSchool: SaaS/web/iOS para homeschool cristao, com planner, registros, evidencias, relatorios, notificacoes, billing e assistente de curriculo com IA.
 
@@ -115,6 +143,7 @@ I am not just a chatbot implementer. I connect AI to the business process around
 
 Product proof:
 
+- AgentOps Deal Desk: AI-assisted opportunity dashboard submitted on Contra. It ranks freelance/consulting leads by win score, urgency, budget, readiness and risk, then converts that into proposal angles, bid ranges and delivery checklists.
 - AgenticosCore: productized Revenue Operations system for B2B companies, combining diagnostics, scorecards, offer architecture, CRM workflows, playbooks, follow-up, human approval gates and KPI cockpit.
 - CantuStudio: AI SATB choir harmonizer available on the App Store. It turns melodies into structured SATB choir drafts with voice-leading review, playback and MusicXML/MIDI/PDF export.
 - FaithSchool: web/iOS homeschool SaaS with devotionals, lesson planning, attendance, hours, grades, evidence records, CSV export, notifications and AI curriculum assistance.
@@ -154,4 +183,3 @@ Produto proprio de IA musical: transforma melodias em rascunhos corais SATB, com
 ### FaithSchool - SaaS / app de educacao com IA
 
 Produto web/iOS para homeschool cristao com devocional, planejamento, frequencia, horas, notas, avaliacoes, evidencias, CSV, multiplos alunos, notificacoes e assistente de curriculo com IA. Demonstra SaaS mobile-first com autenticacao, dados, billing, relatorios e integracao de IA.
-

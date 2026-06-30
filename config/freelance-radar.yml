@@ -1,0 +1,392 @@
+version: 1
+name: paulo-ai-freelance-radar
+default_limit: 8
+
+gates:
+  draft_only: true
+  no_auto_outreach: true
+  no_paid_ads: true
+  no_service_now_customer_ecosystem: true
+  linkedin_side_business_default: false
+  require_human_approval_before_send: true
+  require_lgpd_consent_for_marketing: true
+
+execution_policy:
+  freelance_speed_first:
+    strategy: fastest_safe_first_slice
+    intent: use Paulo's internal AI/tool advantage to reply, scope, demo and deliver faster than marketplace competitors while presenting a professional outcome-first client experience
+    client_facing_positioning:
+      principle: clients buy outcomes, confidence, speed and price; they do not need to hear about Paulo's internal LLM stack
+      allowed_language:
+        - processo enxuto
+        - primeira entrega visivel
+        - escopo fechado
+        - documentacao e handoff
+        - teste com exemplos reais ou dados de teste
+        - automacao or IA only when it is part of the actual client deliverable
+      avoid_language:
+        - many LLMs
+        - multi-LLM
+        - internal agents
+        - prompt stack
+        - which model wrote the proposal
+        - cheap because AI does the work
+    default_response_sla:
+      hot_client_reply_minutes: 5
+      proposal_draft_minutes: 10
+      top_opportunity_review_minutes: 15
+      first_visible_value_target: 24-48h when scope allows
+    internal_acceleration_lanes:
+      - scout: summarize brief, buyer pain, price signal, hidden risks and competitor angle
+      - proposal: draft concise platform-native proposal in the buyer's language
+      - technical: produce first-slice checklist, acceptance criteria and delivery plan
+      - proof: create demo artifact, screenshot, JSON sample, fake-data dashboard or diagram when useful
+      - qa: check scope boundaries, security, platform rules, LGPD/WhatsApp risk and handoff
+    rules:
+      - Lead with speed and a visible first result, not a broad architecture essay.
+      - Use internal AI/tool lanes to compress research, drafting, implementation prep and QA.
+      - Do not expose internal LLM/tooling details in client proposals; translate them into speed, clarity, proof and reliability.
+      - Submit/send only through one coordinator after Paulo approval where the platform action requires it.
+      - Never use speed to spam, bypass platform rules, move off-platform, skip security, or promise unsafe automation.
+      - Default to proof-first offers: demo, first fix, first flow, first dashboard, first integration, first page or first clickable slice.
+
+pricing_policy:
+  99freelas:
+    strategy: lowest_defensible_fast_entry_price
+    intent: win first deals, replies and reviews before maximizing ticket by being cheaper and faster on a smaller first slice
+    quote_shape: paid speed microphase first, upsell implementation/retainer after trust
+    target_position: below visible average and, when competitor prices are visible, at or below the lowest credible competing offer
+    rules:
+      - Never quote the full desired build when the buyer is price sensitive; quote the fastest useful first phase.
+      - Prefer a same-day/24-48h visible artifact when scope allows.
+      - Use aggressive price only by shrinking scope, timeline and deliverables, not by removing tests, docs, security boundaries or handoff.
+      - If scope is vague, sell diagnostic/blueprint/first fix instead of full implementation.
+      - If the project has many proposals, price closer to the minimum band and make the first two proposal lines prove fit.
+      - If the project is high-fit and low-competition, still undercut the visible average, but preserve a clear phase-2 upsell.
+      - Do not use paid promotion/boost unless Paulo explicitly approves at action time.
+    entry_bands_brl:
+      tiny_fix_or_validation_same_day: "R$180-R$300"
+      quick_fix_or_connection_24_48h: "R$250-R$400"
+      landing_or_copy_microphase_24_72h: "R$300-R$550"
+      diagnostic_blueprint_24_48h: "R$350-R$650"
+      crm_bi_powerbi_first_fix_2_3_days: "R$450-R$800"
+      whatsapp_n8n_api_stabilization_2_4_days: "R$550-R$900"
+      ai_agent_or_streamlit_mvp_slice_3_5_days: "R$650-R$1100"
+      lovable_no_code_member_area_slice_3_7_days: "R$900-R$1800"
+      saas_or_marketplace_phase_1_5_10_days: "R$1200-R$2500"
+      large_platform_only_if_phase_1_is_credible: "R$2500-R$5000"
+    floor_guardrails:
+      - Do not price below the effort needed for a usable deliverable.
+      - Do not accept production access, secrets, policy-risky automation or unlimited revisions inside a microphase.
+      - Do not hide that phase 2 will be separately priced.
+
+sources:
+  - id: upwork_ai_automation
+    label: Upwork AI Automation
+    url: https://www.upwork.com/freelance-jobs/ai-automation/
+    region: global
+    source_type: marketplace
+    default_revenue_score: 4
+  - id: upwork_marketing_automation
+    label: Upwork Marketing Automation
+    url: https://www.upwork.com/hire/marketing-automation-freelancers/
+    region: global
+    source_type: marketplace
+    default_revenue_score: 4
+  - id: workana_ai
+    label: Workana Inteligencia Artificial
+    url: https://www.workana.com/pt/jobs?skills=artificial-intelligence
+    region: latam
+    source_type: marketplace
+    default_revenue_score: 3
+  - id: workana_ai_it
+    label: Workana IA em IT
+    url: https://www.workana.com/pt/jobs?category=it-programming&page=1&subcategory=artificial-intelligence-1
+    region: latam
+    source_type: marketplace
+    default_revenue_score: 3
+  - id: 99freelas_ai
+    label: 99Freelas IA
+    url: https://www.99freelas.com.br/projects?q=intelig%C3%AAncia+artificial
+    region: brazil
+    source_type: marketplace
+    default_revenue_score: 3
+  - id: 99freelas_rpa
+    label: 99Freelas RPA
+    url: https://www.99freelas.com.br/projects?q=automa%C3%A7%C3%A3o+de+processos+rob%C3%B3ticos
+    region: brazil
+    source_type: marketplace
+    default_revenue_score: 3
+  - id: contra_automation
+    label: Contra Automation Engineers
+    url: https://contra.com/hire/automation-engineers
+    region: global
+    source_type: marketplace
+    default_revenue_score: 4
+  - id: contra_ai_agents
+    label: Contra AI Agent Developers
+    url: https://contra.com/hire/ai-agent-developers-for-artificial-intelligence
+    region: global
+    source_type: marketplace
+    default_revenue_score: 4
+  - id: malt_ai
+    label: Malt AI Consultants
+    url: https://www.malt.uk/a/freelance/business-consulting/ai-consultant
+    region: emea
+    source_type: marketplace
+    default_revenue_score: 4
+  - id: linkedin_services
+    label: LinkedIn Services
+    url: https://www.linkedin.com/services
+    region: global
+    source_type: network
+    default_revenue_score: 4
+  - id: braintrust_ai_talent
+    label: Braintrust AI Talent Marketplace
+    url: https://www.usebraintrust.com/jobs
+    region: global
+    source_type: vetted_talent_network
+    default_revenue_score: 5
+  - id: ateam_ai_builders
+    label: A.Team AI Builders
+    url: https://www.a.team/
+    region: global
+    source_type: vetted_talent_network
+    default_revenue_score: 5
+  - id: toptal_ai_consulting
+    label: Toptal AI and Product Consulting
+    url: https://www.toptal.com/developers/artificial-intelligence
+    region: global
+    source_type: vetted_marketplace
+    default_revenue_score: 5
+  - id: arc_remote_tech
+    label: Arc Remote Tech Jobs
+    url: https://arc.dev/remote-jobs/software-development
+    region: global
+    source_type: jobs_and_contracts
+    default_revenue_score: 4
+  - id: lemon_developer_network
+    label: Lemon.io Developer Network
+    url: https://lemon.io/for-developers/
+    region: global
+    source_type: vetted_marketplace
+    default_revenue_score: 4
+  - id: wellfound_automation
+    label: Wellfound Automation
+    url: https://wellfound.com/role/r/automation-engineer
+    region: global
+    source_type: jobs
+    default_revenue_score: 3
+  - id: github_bounties_algora
+    label: GitHub Bounties - Algora
+    url: https://algora.io/bounties
+    region: global
+    source_type: bounty
+    default_revenue_score: 3
+  - id: github_bounties_issuehunt
+    label: GitHub Bounties - IssueHunt
+    url: https://oss.issuehunt.io/
+    region: global
+    source_type: bounty
+    default_revenue_score: 2
+  - id: n8n_experts
+    label: n8n Expert Directory
+    url: https://experts.n8n.io/
+    region: global
+    source_type: partner_directory
+    default_revenue_score: 4
+  - id: github_search_agentic
+    label: GitHub Agentic Automation Search
+    url: https://github.com/search?q=n8n+whatsapp+openai+help+wanted&type=issues
+    region: global
+    source_type: oss_search
+    default_revenue_score: 2
+
+keywords:
+  positive:
+    - ai automation
+    - automation
+    - n8n
+    - make
+    - zapier
+    - rag
+    - chatbot
+    - ai agent
+    - workflow
+    - crm
+    - lead generation
+    - content generation
+    - whatsapp
+    - python
+    - playwright
+    - api integration
+    - dashboard
+    - evolution api
+    - whatsapp business
+    - knowledge base
+    - base de conhecimento
+    - openai
+    - langchain
+    - langgraph
+    - vector database
+    - pgvector
+    - webhook
+    - follow-up
+  negative:
+    - adult
+    - crypto trading signal
+    - gambling
+    - scraping personal data
+    - mass dm
+    - fake review
+    - bypass captcha
+    - exam cheating
+    - bradesco
+    - servicenow customer
+
+offers:
+  - id: ai_revenue_ops
+    name: AI Revenue Ops Pack
+    price_test: R$2500-R$6500 setup + R$750-R$3000/month; premium R$7000-R$15000 when it includes LP + WhatsApp + CRM automation
+    timeline: 7 days setup
+    buyer: expert-led small business, boutique consultant, clinic, educator, creator, local premium service
+    promise: Turn expertise into lead capture, content, follow-up, and a simple revenue dashboard.
+    keywords:
+      - marketing automation
+      - crm
+      - lead generation
+      - content generation
+      - dashboard
+      - follow-up
+      - sales
+  - id: automation_audit
+    name: Automation Hygiene Audit
+    price_test: R$490-R$1200 diagnostic, R$1500-R$3500 express automation, R$2500-R$10000 robust n8n/API/CRM build
+    timeline: 5 days
+    buyer: small business with manual ops, spreadsheets, Zapier, Make, n8n, CRM, or API handoffs
+    promise: Map the workflow, fix three high-friction automations, and leave a runbook.
+    keywords:
+      - automation
+      - n8n
+      - make
+      - zapier
+      - python
+      - api integration
+      - workflow
+      - operations
+  - id: content_repurposing
+    name: Content Repurposing Engine
+    price_test: R$1500 setup + R$500-R$1500/month
+    timeline: 3 days
+    buyer: expert with long-form knowledge but no content cadence
+    promise: Convert one long-form source into newsletter, posts, short scripts, and an approval queue.
+    keywords:
+      - content generation
+      - video
+      - social media
+      - newsletter
+      - creator
+      - copywriting
+  - id: agent_ops
+    name: Agent Ops Implementation Kit
+    price_test: R$4800-R$15000 win-lane fixed scope; US$2500-US$10000 global/premium fixed scope + retainer
+    timeline: 7-10 days
+    buyer: founder or team using coding agents, Linear, GitHub, Slack, and docs
+    promise: Install safe agent operating gates across code, tasks, memory, Slack/outbox, and reports.
+    keywords:
+      - ai agent
+      - rag
+      - github
+      - linear
+      - slack
+      - docs
+      - operations
+      - workflow
+  - id: whatsapp_ai_agent
+    name: WhatsApp AI Agent Setup
+    price_test: R$2800-R$6500 99Freelas setup; R$9000-R$24000 premium setup + R$700-R$6000/month
+    timeline: 7-10 days
+    buyer: local business, clinic, educator, ecommerce, B2B service or support team with repeated WhatsApp questions
+    promise: Turn WhatsApp into a controlled AI intake, FAQ, qualification and human-handoff flow.
+    keywords:
+      - whatsapp
+      - whatsapp business
+      - chatbot
+      - ai agent
+      - knowledge base
+      - base de conhecimento
+      - crm
+      - lead generation
+      - follow-up
+  - id: rag_knowledge_base
+    name: RAG Knowledge Base Sprint
+    price_test: R$4000-R$9000 MVP; R$9000-R$28000 premium setup + R$900-R$5000/month
+    timeline: 8-14 days
+    buyer: business with PDFs, policies, manuals, FAQs, support docs, product docs or training material
+    promise: Build a searchable AI knowledge base with ingestion, retrieval, evaluation and handoff documentation.
+    keywords:
+      - rag
+      - knowledge base
+      - base de conhecimento
+      - pdf
+      - openai
+      - vector database
+      - pgvector
+      - langchain
+      - langgraph
+      - chatbot
+  - id: landing_conversion
+    name: Landing Page Conversion Sprint
+    price_test: R$1800-R$3500 basic conversion page; R$3500-R$14000 with copy, tracking, CRM and paid-traffic readiness
+    timeline: 3-6 days
+    buyer: digital product, event, local service, creator, course or offer that needs fast lead capture
+    promise: Ship one focused responsive landing page with copy, CTA, tracking and WhatsApp/form conversion.
+    keywords:
+      - landing page
+      - website
+      - produto digital
+      - evento
+      - conversao
+      - whatsapp
+      - copywriting
+      - lead generation
+  - id: php_openai_debug
+    name: PHP/OpenAI Debug Sprint
+    price_test: R$790-R$2200 win-lane rescue; R$1800-R$7500 production/legacy rescue
+    timeline: 3-5 days
+    buyer: small SaaS or internal system with a broken AI/PDF/OpenAI workflow
+    promise: Reproduce, fix and document the AI bottleneck with logs and a clean handoff.
+    keywords:
+      - php
+      - openai
+      - pdf
+      - api integration
+      - bug
+      - performance
+      - dashboard
+  - id: rapid_ai_diagnostic
+    name: Rapid AI/Automation Diagnostic
+    price_test: R$490-R$1200 quick diagnostic; R$4000-R$10000 security/multi-system diagnostic
+    timeline: 2-4 days
+    buyer: client with vague automation goals or multiple possible systems
+    promise: Convert vague automation demand into a prioritized build plan, risk map and fixed quote.
+    keywords:
+      - consultoria
+      - diagnostico
+      - automation
+      - workflow
+      - ai automation
+      - crm
+      - n8n
+      - make
+
+scoring:
+  offer_fit: 0.30
+  revenue: 0.25
+  speed: 0.15
+  automation_leverage: 0.20
+  risk: 0.10
+
+proposal:
+  max_drafts: 6
+  default_template: proposal-winning-short.md

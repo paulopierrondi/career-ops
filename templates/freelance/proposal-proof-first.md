@@ -61,6 +61,20 @@ teste e proximo passo claro.
 - PT-BR com acento para mercado BR; EN para Upwork/global.
 - Nao expor internal LLM stack — cliente compra resultado, nao infraestrutura.
 
+## Proof Asset Selection
+
+Pick one proof asset that matches the buyer's pain. Do not attach every asset.
+
+| Buyer pain | Best proof | How to cite it |
+|---|---|---|
+| AI dashboard, pipeline, CRM cockpit, internal tool, RevOps, proposal/pricing workflow | AgentOps Deal Desk | "Tenho um proof recente: um dashboard de IA submetido no Contra que prioriza oportunidades por score, budget, risco e proximo passo." |
+| B2B revenue ops, CRM, lead qualification, follow-up, commercial process | AgenticosCore | "Tenho produto proprio de RevOps com diagnostico, CRM, playbooks, follow-up, gates humanos e cockpit de KPIs." |
+| SaaS/app MVP, education workflow, reports, subscriptions, mobile-first UX | FaithSchool | "Tenho SaaS web/iOS proprio com dados, relatorios, notificacoes, billing e assistente de IA." |
+| AI product, export files, backend, validation logic, app delivery | CantuStudio | "Tenho app de IA publicado para harmonizacao SATB, com backend, validacao e exportacao MusicXML/MIDI/PDF." |
+| WhatsApp/CRM/BI/ERP proof | Existing demo pack | Use the matching fake-data demo from `data/freelance-opportunity-learning.md` proof inventory. |
+
+Rule: proof should make the first paid slice feel lower-risk. If the proof does not reduce perceived risk for that exact buyer, omit it.
+
 ## Quando NAO usar
 
 - Job de ticket alto em Upwork/global onde senioridade e vantagem — la use

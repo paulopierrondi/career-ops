@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.paulo.careerops.n8n-ollama-codex-bridge</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/paulopierrondi/Projects/career-ops/ops/n8n/run-ollama-codex-bridge.sh</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Users/paulopierrondi/Projects/career-ops</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PROJECT_DIR</key>
+    <string>/Users/paulopierrondi/Projects/career-ops</string>
+    <key>CAREER_OPS_N8N_ENV</key>
+    <string>/Users/paulopierrondi/.config/career-ops-n8n/env</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/Users/paulopierrondi/Library/Logs/career-ops-n8n/ollama-codex-bridge.stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/paulopierrondi/Library/Logs/career-ops-n8n/ollama-codex-bridge.stderr.log</string>
+</dict>
+</plist>

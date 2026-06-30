@@ -84,6 +84,24 @@ Use only when the client asks why Paulo or when the project is crowded:
 O diferencial aqui e eu ir direto no que reduz risco: escopo fechado, primeira entrega visivel, teste, documentacao e caminho de evolucao. Voce nao fica comprando uma promessa grande; recebe um primeiro resultado para decidir o proximo passo.
 ```
 
+## Proof Add-on - AgentOps / Dashboard / RevOps
+
+Use when the project involves AI dashboard, CRM, RevOps, pipeline, internal tool, automation planning, proposal/pricing system, SaaS MVP or no-code/low-code prototype.
+
+```text
+Para mostrar que eu nao fico so na teoria, tenho um proof recente: criei e submeti no Contra o AgentOps Deal Desk, um dashboard de IA que prioriza oportunidades por score, urgencia, budget, prontidao e risco, e transforma isso em angulo de proposta, faixa de preco, checklist e proximo passo.
+
+Para o seu projeto, eu usaria a mesma logica: primeira entrega pequena, visivel e testavel, com escopo fechado e fase 2 separada.
+```
+
+Short version for crowded projects:
+
+```text
+Tenho proof recente de dashboard/IA submetido no Contra: AgentOps Deal Desk. Posso aplicar a mesma abordagem aqui: primeira fatia pequena, visivel, testavel e com proximo passo documentado.
+```
+
+When links are not allowed or may be penalized by the marketplace, do not paste the URL in the public proposal. Mention the proof and offer to attach/send inside the platform chat if the client asks.
+
 ## Price Objection
 
 ```text

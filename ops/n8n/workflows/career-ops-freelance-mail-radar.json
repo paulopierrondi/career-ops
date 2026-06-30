@@ -1,0 +1,217 @@
+{
+  "id": "careerops-freelance-mail-radar",
+  "name": "Career Ops - Workana + 99Freelas Mail Radar",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Career Ops - Workana + 99Freelas Mail Radar\n\nRuns Paulo's local Mail.app-based radar every 10 minutes. It detects marketplace opportunity emails, scores them, generates proposal drafts, archives processed notification emails from Google INBOX, and alerts Paulo only when there is a new actionable lead or a failure.\n\nExecution prompt: `ops/n8n/freelance-execution-prompt.md`.\n\nMode: draft-only. `N8N_FREELANCE_AUTOMATED_VAI` must stay `false`; if it is ever `true`, treat it as a misconfiguration, not as approval. The workflow never submits Workana/99Freelas proposals, spends credits/connections, boosts, triggers paid moderation, bypasses login/CAPTCHA/2FA, changes profile/payment/tax/identity data, reads secrets, or moves contact off-platform.",
+        "height": 340,
+        "width": 760,
+        "color": 5
+      },
+      "id": "sticky-contract",
+      "name": "Operating contract",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        -280
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 10
+            }
+          ]
+        }
+      },
+      "id": "schedule-trigger",
+      "name": "Every 10 minutes",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:18765/run",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-career-ops-token",
+              "value": "={{ $env.CAREER_OPS_N8N_BRIDGE_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 180000
+        }
+      },
+      "id": "run-radar",
+      "name": "Run safe local radar bridge",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -220,
+        210
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const result = $json.result ?? $json;\nreturn [{ json: { ...result, bridge_ok: $json.ok ?? null, bridge_status: $json.status ?? null, bridge_stderr_tail: $json.stderr_tail ?? null } }];"
+      },
+      "id": "parse-result",
+      "name": "Parse radar result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        80,
+        210
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "actionable-check",
+              "leftValue": "={{ Number($json.actionable || 0) }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "larger"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "has-actionable",
+      "name": "Has actionable lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        380,
+        210
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "actionable-output",
+      "name": "Actionable lead generated",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        700,
+        120
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "nohit-output",
+      "name": "No actionable lead",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        700,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Manual run": {
+      "main": [
+        [
+          {
+            "node": "Run safe local radar bridge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Every 10 minutes": {
+      "main": [
+        [
+          {
+            "node": "Run safe local radar bridge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run safe local radar bridge": {
+      "main": [
+        [
+          {
+            "node": "Parse radar result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse radar result": {
+      "main": [
+        [
+          {
+            "node": "Has actionable lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has actionable lead?": {
+      "main": [
+        [
+          {
+            "node": "Actionable lead generated",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "No actionable lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
