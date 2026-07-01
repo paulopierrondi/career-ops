@@ -35,8 +35,14 @@ if [[ -f "$N8N_ENV_FILE" ]]; then
 fi
 
 export AUTOMATION_ID
-export N8N_JOB_APPLICATION_SUBMIT_MODE="${SUBMIT_MODE:-${N8N_JOB_APPLICATION_SUBMIT_MODE:-ready_for_submit}}"
-export N8N_JOB_APPLICATION_DAILY_LIMIT="${N8N_JOB_APPLICATION_DAILY_LIMIT:-3}"
+if [[ -n "${SUBMIT_MODE:-}" ]]; then
+  export N8N_JOB_APPLICATION_SUBMIT_MODE="$SUBMIT_MODE"
+elif [[ -n "${N8N_JOB_APPLICATION_SUBMIT_MODE:-}" ]]; then
+  export N8N_JOB_APPLICATION_SUBMIT_MODE
+fi
+if [[ -n "${N8N_JOB_APPLICATION_DAILY_LIMIT:-}" ]]; then
+  export N8N_JOB_APPLICATION_DAILY_LIMIT
+fi
 
 if [[ -d "$LOCK_DIR" ]] && find "$LOCK_DIR" -mmin +120 -print -quit | grep -q .; then
   rm -rf "$LOCK_DIR"

@@ -17,7 +17,7 @@ Rodar uma vez por dia o autopiloto local:
 5. Avaliar fit.
 6. Gerar pacote de aplicacao para vagas fortes: CV PDF, cover letter PDF,
    answers JSON, manifest e evidencia.
-7. Default: `READY_FOR_SUBMIT`; preencher/preparar ate antes do clique final.
+7. Ler defaults nao secretos de `config/job-application-autopilot.yml`.
 8. Submeter automaticamente somente quando `SUBMIT_MODE=auto_submit_low_risk`
    e todos os criterios abaixo passarem.
 9. Enviar email final para `pierrondi@gmail.com`.
@@ -42,7 +42,10 @@ Paulo aprovou automacao diaria para:
 - procurar vagas;
 - avaliar fit;
 - gerar CV/cover/respostas;
-- preencher/preparar ate o final submit em modo `ready_for_submit`;
+- preencher/preparar e submeter automaticamente em modo `auto_submit_low_risk`
+  quando todos os gates passam;
+- voltar para `ready_for_submit`, `draft_ready` ou `blocked` quando qualquer
+  gate baixo-risco falhar;
 - submeter automaticamente somente no modo literal `auto_submit_low_risk`;
 - enviar email final com resultado.
 
@@ -70,6 +73,10 @@ Submeter automaticamente apenas se todos forem verdadeiros:
 Se qualquer gate falhar, retornar `ready_for_submit`, `draft_ready`,
 `blocked` ou `failed`,
 mas nunca forcar clique final.
+
+Se uma URL ja tiver pacote/tentativa anterior ou cair em nao-alvo, arquivar a
+entrada do pipeline e seguir. Isso evita loop diario em formulario ja preparado,
+ATS bloqueado ou vaga fora da lane de Paulo.
 
 ## Saida obrigatoria
 

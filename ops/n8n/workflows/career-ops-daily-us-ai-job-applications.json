@@ -5,7 +5,7 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Career Ops - Daily US AI Job Applications\n\nRuns once per day. Searches US-first AI GTM / Client Director / Sales / Account Executive roles, reads recent Gmail job alerts through the local Google Mail account when available, generates CV + cover + answer packages, writes an approval queue under reports/job-applications/approval-queue/, and defaults to READY_FOR_SUBMIT.\n\nExecution prompt: `ops/n8n/job-application-execution-prompt.md`.\n\nStanding authorization: Paulo approved daily search, scoring, package generation and safe form preparation. Final submit is only automatic when `SUBMIT_MODE=auto_submit_low_risk` and every low-risk criterion passes. Otherwise the runner returns ready_for_submit/draft_ready/blocked, exposes approval_queue_path, and sends Paulo an approval email.",
+        "content": "## Career Ops - Daily US AI Job Applications\n\nRuns once per day. Searches US-first AI GTM / Client Director / Sales / Account Executive roles, reads recent Gmail job alerts through the local Google Mail account when available, generates CV + cover + answer packages, and writes an approval queue under reports/job-applications/approval-queue/ when a gate blocks submission.\n\nExecution prompt: `ops/n8n/job-application-execution-prompt.md`.\n\nStanding authorization: Paulo approved daily search, scoring, package generation and safe auto-submit through `config/job-application-autopilot.yml`. Final submit occurs only when `auto_submit_low_risk` is active and every low-risk criterion passes. Otherwise the runner returns ready_for_submit/draft_ready/blocked, exposes approval_queue_path, and sends Paulo an approval email.",
         "height": 360,
         "width": 780,
         "color": 4

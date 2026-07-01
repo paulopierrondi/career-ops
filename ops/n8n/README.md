@@ -161,18 +161,25 @@ Schedule:
 - evaluates target roles with `openrouter-runner.mjs`
 - generates CV PDF, cover letter PDF, application answers and a manifest under `output/job-applications/`
 - writes a daily approval queue under `reports/job-applications/approval-queue/` whenever Paulo needs to review or submit prepared applications
-- defaults to `ready_for_submit`: prepare/fill safe fields up to final submit, then ask Paulo
-- submits automatically only when `SUBMIT_MODE=auto_submit_low_risk` and every low-risk gate passes
+- reads non-secret defaults from `config/job-application-autopilot.yml`, with env vars taking precedence
+- now defaults to `auto_submit_low_risk` for Paulo's authorized Career Ops run, while every low-risk gate still must pass
+- skips and archives bounded non-target or previously prepared/blocked URLs so daily n8n runs do not loop on the same application
+- classifies ATS anti-automation or possible-spam submit errors as external blockers, not as successful submissions
 - sends a completion email to `pierrondi@gmail.com` every run
 - writes an approval queue under `reports/job-applications/approval-queue/` when a role needs Paulo review; `ready_for_submit` items include required fields plus suggested answers for Paulo approval
 
-Default automation flags in `scripts/n8n-job-application-run.sh`:
+Default automation flags in `config/job-application-autopilot.yml`:
 
-- `N8N_JOB_APPLICATION_SUBMIT_MODE=ready_for_submit`
-- `N8N_JOB_APPLICATION_DAILY_LIMIT=3`
-- `N8N_JOB_APPLICATION_MIN_SCORE=4.0`
-- `N8N_JOB_APPLICATION_AUTO_SUBMIT_SCORE=4.2`
-- `N8N_JOB_APPLICATION_LEGAL_ACK_VAI=false`
+- `submit_mode=auto_submit_low_risk`
+- `daily_limit=3`
+- `min_score=4.0`
+- `auto_submit_score=4.2`
+- `legal_ack_vai=true`
+- `eeo_decline_vai=true`
+- `timeout_seconds=900`
+
+Environment variables still override the config file. Use
+`N8N_JOB_APPLICATION_SUBMIT_MODE=ready_for_submit` to force review-only mode.
 
 The autopilot stops at `ready_for_submit`, `draft_ready` or `blocked` when it
 sees CAPTCHA, Cloudflare, login, 2FA, email-code verification, payment,

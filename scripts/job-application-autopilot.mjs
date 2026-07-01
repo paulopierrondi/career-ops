@@ -21,6 +21,7 @@ import {
   copyFileSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   writeFileSync,
 } from 'node:fs';
@@ -30,6 +31,7 @@ import { load as yamlLoad } from 'js-yaml';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const NODE = process.execPath;
+const RUN_STARTED_AT = Date.now();
 const RUN_ID = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 const AUTOMATION_ID = process.env.AUTOMATION_ID || 'n8n-daily-us-ai-job-applications';
 const REPORT_DIR = path.join(ROOT, 'reports', 'job-applications');
@@ -38,30 +40,36 @@ const EVIDENCE_DIR = path.join(ROOT, 'reports', 'application-screenshots');
 const PACKAGE_DIR = path.join(ROOT, 'output', 'job-applications');
 const PIPELINE_PATH = path.join(ROOT, 'data', 'pipeline.md');
 const SCAN_HISTORY_PATH = path.join(ROOT, 'data', 'scan-history.tsv');
+const AUTOPILOT_CONFIG_PATH = process.env.N8N_JOB_APPLICATION_CONFIG
+  || path.join(ROOT, 'config', 'job-application-autopilot.yml');
 
 const args = process.argv.slice(2);
 const DRY_RUN = args.includes('--dry-run');
 const JSON_ONLY = args.includes('--json');
 const SELF_TEST = args.includes('--self-test');
+const AUTOPILOT_CONFIG = readAutopilotConfig();
+const CONFIGURED_DAILY_LIMIT = numberSetting('N8N_JOB_APPLICATION_DAILY_LIMIT', 'daily_limit', 3);
 
 const SETTINGS = {
-  dailyLimit: numberEnv('N8N_JOB_APPLICATION_DAILY_LIMIT', 3),
-  minScore: numberEnv('N8N_JOB_APPLICATION_MIN_SCORE', 4.0),
-  autoSubmitScore: numberEnv('N8N_JOB_APPLICATION_AUTO_SUBMIT_SCORE', 4.2),
-  lookbackHours: numberEnv('N8N_JOB_APPLICATION_MAIL_LOOKBACK_HOURS', 30),
-  scanEnabled: boolEnv('N8N_JOB_APPLICATION_SCAN_ENABLED', true),
-  mailEnabled: boolEnv('N8N_JOB_APPLICATION_MAIL_ENABLED', true),
+  dailyLimit: CONFIGURED_DAILY_LIMIT,
+  minScore: numberSetting('N8N_JOB_APPLICATION_MIN_SCORE', 'min_score', 4.0),
+  autoSubmitScore: numberSetting('N8N_JOB_APPLICATION_AUTO_SUBMIT_SCORE', 'auto_submit_score', 4.2),
+  lookbackHours: numberSetting('N8N_JOB_APPLICATION_MAIL_LOOKBACK_HOURS', 'mail_lookback_hours', 30),
+  scanEnabled: boolSetting('N8N_JOB_APPLICATION_SCAN_ENABLED', 'scan_enabled', true),
+  mailEnabled: boolSetting('N8N_JOB_APPLICATION_MAIL_ENABLED', 'mail_enabled', true),
   submitMode: submitModeEnv(),
-  legalAck: boolEnv('N8N_JOB_APPLICATION_LEGAL_ACK_VAI', false),
-  eeoDecline: boolEnv('N8N_JOB_APPLICATION_EEO_DECLINE_VAI', false),
-  headed: boolEnv('N8N_JOB_APPLICATION_HEADED', true),
-  livenessEnabled: boolEnv('N8N_JOB_APPLICATION_LIVENESS_ENABLED', true),
-  maxAttempts: numberEnv(
+  legalAck: boolSetting('N8N_JOB_APPLICATION_LEGAL_ACK_VAI', 'legal_ack_vai', false),
+  eeoDecline: boolSetting('N8N_JOB_APPLICATION_EEO_DECLINE_VAI', 'eeo_decline_vai', false),
+  headed: boolSetting('N8N_JOB_APPLICATION_HEADED', 'headed', true),
+  livenessEnabled: boolSetting('N8N_JOB_APPLICATION_LIVENESS_ENABLED', 'liveness_enabled', true),
+  maxAttempts: numberSetting(
     'N8N_JOB_APPLICATION_MAX_ATTEMPTS',
-    numberEnv('N8N_JOB_APPLICATION_DAILY_LIMIT', 3) <= 0
+    'max_attempts',
+    CONFIGURED_DAILY_LIMIT <= 0
       ? 0
-      : Math.max(numberEnv('N8N_JOB_APPLICATION_DAILY_LIMIT', 3) * 10, 20),
+      : Math.max(CONFIGURED_DAILY_LIMIT * 10, 20),
   ),
+  runTimeoutSeconds: numberSetting('N8N_JOB_APPLICATION_TIMEOUT_SECONDS', 'timeout_seconds', 15 * 60),
 };
 
 const TARGET_KEYWORDS = [
@@ -101,6 +109,38 @@ const BLOCKED_TITLE_KEYWORDS = [
   'entry level',
 ];
 
+const COMMERCIAL_OR_APPLIED_ROLE_SIGNALS = [
+  'account',
+  'adoption',
+  'architect',
+  'client',
+  'consultant',
+  'customer',
+  'deployment',
+  'enterprise',
+  'field',
+  'forward deployed',
+  'gtm',
+  'implementation',
+  'revenue',
+  'sales',
+  'solution',
+  'solutions',
+  'strategic',
+  'technical account',
+  'transformation',
+];
+
+const PURE_RESEARCH_ROLE_PATTERNS = [
+  /\bai researcher\b/i,
+  /\bmachine learning researcher\b/i,
+  /\bml researcher\b/i,
+  /\bresearch engineer\b/i,
+  /\bresearch scientist\b/i,
+  /\bscientist\b/i,
+  /\bmultimodal llms?\b/i,
+];
+
 const APPLICATION_HARD_BLOCKS = [
   {
     id: 'servicenow_brazil',
@@ -136,12 +176,63 @@ function boolEnv(name, fallback) {
   return !/^(0|false|no|off)$/i.test(raw);
 }
 
+function readAutopilotConfig() {
+  if (!existsSync(AUTOPILOT_CONFIG_PATH)) return {};
+  const raw = readText(AUTOPILOT_CONFIG_PATH);
+  if (!raw.trim()) return {};
+  try {
+    return yamlLoad(raw) || {};
+  } catch (error) {
+    console.error(`WARN failed to parse ${AUTOPILOT_CONFIG_PATH}: ${redact(error.message)}`);
+    return {};
+  }
+}
+
+function numberSetting(envName, configKey, fallback) {
+  const envValue = process.env[envName];
+  if (envValue != null && envValue !== '') {
+    const parsed = Number(envValue);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+  const configValue = AUTOPILOT_CONFIG?.[configKey];
+  if (configValue != null && configValue !== '') {
+    const parsed = Number(configValue);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+  return fallback;
+}
+
+function boolSetting(envName, configKey, fallback) {
+  const envValue = process.env[envName];
+  if (envValue != null && envValue !== '') return !/^(0|false|no|off)$/i.test(String(envValue));
+  const configValue = AUTOPILOT_CONFIG?.[configKey];
+  if (configValue != null && configValue !== '') return !/^(0|false|no|off)$/i.test(String(configValue));
+  return fallback;
+}
+
 function submitModeEnv() {
-  const raw = String(process.env.SUBMIT_MODE || process.env.N8N_JOB_APPLICATION_SUBMIT_MODE || 'ready_for_submit')
+  const raw = String(
+    process.env.SUBMIT_MODE
+      || process.env.N8N_JOB_APPLICATION_SUBMIT_MODE
+      || AUTOPILOT_CONFIG?.submit_mode
+      || 'ready_for_submit',
+  )
     .trim()
     .toLowerCase();
   if (raw === 'auto_submit_low_risk') return raw;
   return 'ready_for_submit';
+}
+
+function startRunTimeout() {
+  if (SELF_TEST || SETTINGS.runTimeoutSeconds <= 0) return null;
+  return setTimeout(() => {
+    const elapsedSeconds = Math.round((Date.now() - RUN_STARTED_AT) / 1000);
+    console.error(
+      `ERROR ${AUTOMATION_ID} exceeded N8N_JOB_APPLICATION_TIMEOUT_SECONDS=${SETTINGS.runTimeoutSeconds}s ` +
+        `after ${elapsedSeconds}s; exiting to prevent an unbounded run.`,
+    );
+    process.exit(124);
+  }, SETTINGS.runTimeoutSeconds * 1000);
 }
 
 function ensureDirs() {
@@ -218,6 +309,27 @@ function run(command, commandArgs, options = {}) {
 function readText(relOrAbs, fallback = '') {
   const full = path.isAbsolute(relOrAbs) ? relOrAbs : path.join(ROOT, relOrAbs);
   return existsSync(full) ? readFileSync(full, 'utf8') : fallback;
+}
+
+function readJson(relOrAbs, fallback = null) {
+  const raw = readText(relOrAbs, '');
+  if (!raw.trim()) return fallback;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function nestedFiles(dir, predicate) {
+  if (!existsSync(dir)) return [];
+  const out = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...nestedFiles(full, predicate));
+    else if (predicate(entry.name, full)) out.push(full);
+  }
+  return out.sort();
 }
 
 function readProfile() {
@@ -336,9 +448,95 @@ function archivePipelineUrls(items) {
 
 function isStalePipelineResult(item) {
   return (
-    ['skipped_expired', 'evaluated'].includes(item.status)
-    || (item.status === 'blocked' && /liveness failed|no visible apply control|expired|404|work authorization|no sponsorship|unable to sponsor|not able to provide sponsorship/i.test(item.blocker || ''))
+    ['skipped_expired', 'skipped_already_submitted', 'skipped_previous_attempt', 'skipped_not_target', 'evaluated'].includes(item.status)
+    || (item.status === 'blocked' && /liveness failed|no visible apply control|expired|404|work authorization|no sponsorship|unable to sponsor|not able to provide sponsorship|possible spam|anti-automation|ats spam/i.test(item.blocker || ''))
   );
+}
+
+function applicationUrlKey(raw) {
+  try {
+    const url = new URL(String(raw || '').trim());
+    url.hash = '';
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(utm_|gh_src|source|ref|referrer|campaign|trk|email|job_alert)/i.test(key)) {
+        url.searchParams.delete(key);
+      }
+    }
+    const query = url.searchParams.toString();
+    const pathname = url.pathname.replace(/\/+$/, '');
+    return `${url.origin}${pathname}${query ? `?${query}` : ''}`.toLowerCase();
+  } catch {
+    return String(raw || '').trim().replace(/\/+$/, '').toLowerCase();
+  }
+}
+
+function submittedApplicationIndex() {
+  const byUrl = new Map();
+  const remember = (entry, sourcePath) => {
+    if (!entry?.url) return;
+    const submitted = entry.submitted === true || entry.application_status === 'submitted' || entry.status === 'submitted';
+    if (!submitted) return;
+    byUrl.set(applicationUrlKey(entry.url), {
+      url: entry.url,
+      company: entry.company || '',
+      role: entry.role || '',
+      submitted_at: entry.submitted_at || entry.timestamp || entry.started_at || '',
+      evidence_path: entry.submission_evidence_path || entry.confirmation_path || entry.evidence_path || '',
+      report_path: entry.submission_report_path || entry.report_path || '',
+      manifest_path: entry.manifest_path || '',
+      source_path: path.relative(ROOT, sourcePath),
+    });
+  };
+
+  for (const file of nestedFiles(PACKAGE_DIR, (name) => name.endsWith('-manifest.json'))) {
+    remember(readJson(file, null), file);
+  }
+  for (const file of nestedFiles(REPORT_DIR, (name) => /^\d{4}-\d{2}-\d{2}-.+n8n-daily-us-ai-job-applications\.json$/.test(name))) {
+    const data = readJson(file, null);
+    remember(data, file);
+    for (const item of Array.isArray(data?.processed) ? data.processed : []) {
+      remember(item, file);
+    }
+  }
+  return byUrl;
+}
+
+function previousApplicationAttemptIndex() {
+  const byUrl = new Map();
+  const remember = (entry, sourcePath) => {
+    if (!entry?.url) return;
+    const submitted = entry.submitted === true || entry.application_status === 'submitted' || entry.status === 'submitted';
+    if (submitted) return;
+    const status = String(entry.status || '');
+    const applicationStatus = String(entry.application_status || '');
+    const actionable = ['ready_for_submit', 'draft_ready', 'blocked'].includes(status)
+      || /blocked_|form_filled_|package_ready_|submit_click_without_confirmation/i.test(applicationStatus);
+    if (!actionable) return;
+    byUrl.set(applicationUrlKey(entry.url), {
+      url: entry.url,
+      company: entry.company || '',
+      role: entry.role || '',
+      status,
+      application_status: applicationStatus,
+      blocker: entry.blocker || '',
+      report_path: entry.report_path || '',
+      approval_queue_path: entry.approval_queue_path || '',
+      evidence_path: entry.confirmation_path || entry.evidence_path || '',
+      source_path: path.relative(ROOT, sourcePath),
+    });
+  };
+
+  for (const file of nestedFiles(PACKAGE_DIR, (name) => name.endsWith('-manifest.json'))) {
+    remember(readJson(file, null), file);
+  }
+  for (const file of nestedFiles(REPORT_DIR, (name) => /^\d{4}-\d{2}-\d{2}-.+n8n-daily-us-ai-job-applications\.json$/.test(name))) {
+    const data = readJson(file, null);
+    remember(data, file);
+    for (const item of Array.isArray(data?.processed) ? data.processed : []) {
+      remember(item, file);
+    }
+  }
+  return byUrl;
 }
 
 function companyFromUrl(raw) {
@@ -363,7 +561,25 @@ function isTarget(item) {
   const haystack = `${item.company} ${item.role} ${item.location} ${item.url}`.toLowerCase();
   if (applicationHardBlock(item)) return false;
   if (BLOCKED_TITLE_KEYWORDS.some((keyword) => haystack.includes(keyword))) return false;
+  if (isPureResearchRole(item)) return false;
   return TARGET_KEYWORDS.some((keyword) => haystack.includes(keyword));
+}
+
+function isPureResearchRole(item) {
+  const role = String(item.role || '');
+  const haystack = `${item.company || ''} ${item.role || ''} ${item.location || ''} ${item.url || ''}`.toLowerCase();
+  if (!PURE_RESEARCH_ROLE_PATTERNS.some((pattern) => pattern.test(role))) return false;
+  return !COMMERCIAL_OR_APPLIED_ROLE_SIGNALS.some((signal) => haystack.includes(signal));
+}
+
+function notTargetReason(item) {
+  const hardBlock = applicationHardBlock(item);
+  if (hardBlock) return hardBlock.reason;
+  const haystack = `${item.company || ''} ${item.role || ''} ${item.location || ''} ${item.url || ''}`.toLowerCase();
+  const blockedKeyword = BLOCKED_TITLE_KEYWORDS.find((keyword) => haystack.includes(keyword));
+  if (blockedKeyword) return `blocked title keyword: ${blockedKeyword}`;
+  if (isPureResearchRole(item)) return 'pure ML/research role outside Paulo target lanes';
+  return 'not enough AI GTM, solutions, enterprise, agentic, or forward-deployed signal for the current profile';
 }
 
 function applicationHardBlock(item) {
@@ -479,7 +695,7 @@ async function evaluateUrl(item) {
     };
   }
 
-  const jd = fetchJobText(item);
+  const jd = await fetchJobText(item);
   if (!jd.ok) {
     return {
       ok: false,
@@ -517,7 +733,7 @@ async function evaluateUrl(item) {
   };
 }
 
-function fetchJobText(item) {
+async function fetchJobText(item) {
   const result = run('curl', [
     '-L',
     '--max-time',
@@ -534,8 +750,36 @@ function fetchJobText(item) {
     return { ok: false, text: '', error: redact(result.stderr || result.error || 'curl failed') };
   }
   const text = htmlToText(result.stdout);
-  if (text.length < 400) return { ok: false, text, error: 'fetched content too short to evaluate' };
+  if (text.length < 400) {
+    const browserText = await fetchJobTextWithBrowser(item);
+    if (browserText.ok) return browserText;
+    return { ok: false, text, error: browserText.error || 'fetched content too short to evaluate' };
+  }
   return { ok: true, text: text.slice(0, 45000), error: '' };
+}
+
+async function fetchJobTextWithBrowser(item) {
+  let chromium;
+  try {
+    ({ chromium } = await import('playwright'));
+  } catch (error) {
+    return { ok: false, text: '', error: `Playwright unavailable for browser JD fetch: ${error.message}` };
+  }
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage({ viewport: { width: 1280, height: 1800 } });
+  try {
+    await page.goto(item.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
+    await page.waitForTimeout(3500);
+    const body = await safeBodyText(page);
+    const text = htmlToText(body);
+    if (text.length < 400) return { ok: false, text, error: 'browser-rendered content too short to evaluate' };
+    return { ok: true, text: text.slice(0, 45000), error: '' };
+  } catch (error) {
+    return { ok: false, text: '', error: `browser JD fetch failed: ${redact(error.message)}` };
+  } finally {
+    await browser.close().catch(() => {});
+  }
 }
 
 function htmlToText(html) {
@@ -636,25 +880,84 @@ function fillTemplate(template, replacements) {
   return html.replace(/\{\{PHOTO\}\}/g, '').replace(/\{\{[^}]+\}\}/g, '');
 }
 
+function uniqueList(items, max = 12) {
+  const seen = new Set();
+  const out = [];
+  for (const item of items.filter(Boolean)) {
+    const value = String(item).trim();
+    const key = value.toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(value);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+function applicationPositioning({ role, company, reportText, profile }) {
+  const text = `${role || ''} ${company || ''} ${reportText || ''}`;
+  const catalog = [
+    {
+      name: 'Enterprise AI GTM',
+      test: /account executive|sales|gtm|revenue|pipeline|enterprise buyer|strategic account|client director/i,
+      keywords: ['enterprise AI GTM', 'strategic accounts', 'executive discovery', 'pipeline creation', 'technical value narrative'],
+      proof: '15+ years across enterprise software, ServiceNow advisory, Oracle cloud architecture and regulated operating models; influenced $5M+ in pipeline through executive and technical stakeholder alignment.',
+      fit: 'I can sell AI credibly because I understand the buying motion, the architecture questions and the operating-model work needed after the demo.',
+    },
+    {
+      name: 'Agentic AI Solutions',
+      test: /agent|agentic|workflow|automation|orchestration|llm|ai platform|implementation|solution architect/i,
+      keywords: ['agentic AI', 'LLM workflows', 'solution architecture', 'workflow orchestration', 'human approval gates'],
+      proof: 'Built and operate governed multi-agent workflows with role separation, durable context, execution control, human approval gates, secret boundaries and reusable evidence.',
+      fit: 'I turn agentic AI from demo into implementation motion: use-case selection, architecture, controls, delivery rhythm and adoption evidence.',
+    },
+    {
+      name: 'Forward Deployed AI',
+      test: /forward deployed|field|customer engineer|solutions engineer|prototype|implementation|deployment|customer-facing/i,
+      keywords: ['forward deployed AI', 'customer discovery', 'prototype-to-value', 'stakeholder alignment', 'delivery operating model'],
+      proof: 'Worked across executives, solution teams, services, partners and delivery groups to translate business pain into credible technical adoption plans.',
+      fit: 'I can sit with customers, shape the problem, translate it into an architecture and keep the delivery path tied to measurable adoption.',
+    },
+    {
+      name: 'AI Transformation',
+      test: /transformation|adoption|governance|operating model|change|value realization|outcomes/i,
+      keywords: ['AI transformation', 'adoption velocity', 'governance', 'operating model', 'value realization'],
+      proof: 'Created operating models and roadmaps that tied ServiceNow/ITOM/CMDB maturity to adoption velocity, operational visibility and expansion potential.',
+      fit: 'I connect AI strategy to adoption mechanics: governance, stakeholder alignment, workflow redesign, value proof and expansion path.',
+    },
+  ];
+  const matches = catalog.filter((item) => item.test.test(text));
+  const primary = matches[0] || catalog[0];
+  const headline = profile?.narrative?.headline || 'Enterprise AI operator who builds governed multi-agent implementation systems';
+  return {
+    archetype: primary.name,
+    keywords: uniqueList([
+      ...matches.flatMap((item) => item.keywords),
+      'ServiceNow ITOM/CMDB/CSDM',
+      'technical GTM',
+      'enterprise architecture',
+      'regulated enterprise delivery',
+      'value realization',
+    ], 12),
+    summary: [
+      `Enterprise AI architect and technical GTM operator targeting ${role} at ${company}.`,
+      `${headline}.`,
+      primary.fit,
+      'Bridges executive discovery, solution architecture, operating-model design and hands-on AI workflow execution across ServiceNow, Oracle and regulated enterprise environments.',
+    ].join(' '),
+    coverProofs: uniqueList(matches.length ? matches.map((item) => item.proof) : [primary.proof], 3),
+    fitAnswer: primary.fit,
+  };
+}
+
 function buildCvHtml({ company, role, reportText, profile, cvText, candidate }) {
   const template = readText('templates/cv-template.html');
-  const summary = [
-    `Enterprise AI architect and technical GTM operator targeting ${role} at ${company}.`,
-    profile?.narrative?.headline || 'Builds governed multi-agent implementation systems for enterprise AI adoption.',
-    'Bridges executive enterprise sales, solution architecture, adoption operating models and hands-on AI workflow building across ServiceNow, Oracle and regulated enterprise environments.',
-  ].join(' ');
-  const jdKeywords = [
+  const positioning = applicationPositioning({ role, company, reportText, profile });
+  const jdKeywords = uniqueList([
     role,
     company,
-    'AI GTM',
-    'enterprise sales',
-    'client director',
-    'strategic account executive',
-    'agentic AI',
-    'solution architecture',
-    'governed multi-agent operations',
-    'value realization',
-  ];
+    ...positioning.keywords,
+  ], 10);
   const coreSkills = bulletsFrom(extractSection(cvText, 'CORE SKILLS', /\nSELECTED AI/), 8);
   const selectedWork = bulletsFrom(extractSection(cvText, 'SELECTED AI, LLM & AUTOMATION WORK', /\nEXPERIENCE\b/), 5);
   const education = bulletsFrom(extractSection(cvText, 'EDUCATION', /\nCERTIFICATIONS\b/), 6)
@@ -675,7 +978,7 @@ function buildCvHtml({ company, role, reportText, profile, cvText, candidate }) 
     PORTFOLIO_DISPLAY: escapeHtml(candidate.portfolio.replace(/^https?:\/\//, '')),
     LOCATION: escapeHtml(candidate.location),
     SECTION_SUMMARY: 'Professional Summary',
-    SUMMARY_TEXT: escapeHtml(summary),
+    SUMMARY_TEXT: escapeHtml(positioning.summary),
     SECTION_COMPETENCIES: 'Core Competencies',
     COMPETENCIES: jdKeywords.slice(0, 9).map((kw) => `<span class="competency-tag">${escapeHtml(kw)}</span>`).join(''),
     SECTION_EXPERIENCE: 'Work Experience',
@@ -691,7 +994,11 @@ function buildCvHtml({ company, role, reportText, profile, cvText, candidate }) 
   });
 }
 
-function buildCoverPayload({ company, role, profile, candidate }) {
+function buildCoverPayload({ company, role, reportText, profile, candidate }) {
+  const positioning = applicationPositioning({ role, company, reportText, profile });
+  const proofImpacts = positioning.coverProofs.length ? positioning.coverProofs : [
+    'Advised strategic enterprise stakeholders on AI adoption, platform operating models, ITOM/CMDB maturity, governance and measurable outcomes.',
+  ];
   return {
     candidate: {
       name: candidate.fullName,
@@ -700,30 +1007,20 @@ function buildCoverPayload({ company, role, profile, candidate }) {
       phone: candidate.phone,
       linkedin: candidate.linkedin,
       github: candidate.portfolio,
-      credentials: ['Enterprise AI', 'Technical GTM', 'ServiceNow / ITOM / CMDB', 'Agentic operations'],
+      credentials: uniqueList(['Enterprise AI', positioning.archetype, 'Technical GTM', 'ServiceNow / ITOM / CMDB', 'Agentic operations'], 5),
     },
     letter: {
       company,
       role_title: role,
       city: 'United States',
       date: new Date().toISOString().slice(0, 10),
-      opening: `I am applying for ${role} because it sits at the intersection where I create the most leverage: enterprise AI adoption, executive GTM, technical architecture and customer operating-model change.`,
+      opening: `I am applying for ${role} because it maps directly to my strongest lane: ${positioning.archetype.toLowerCase()}, enterprise adoption, technical architecture and customer operating-model change.`,
       profile_intro: profile?.narrative?.exit_story || 'My background combines ServiceNow enterprise advisory, Oracle cloud architecture and hands-on AI workflow building.',
-      achievements: [
-        {
-          lead: 'Enterprise AI and GTM',
-          impact: 'Advised strategic enterprise stakeholders on AI adoption, platform operating models, ITOM/CMDB maturity, governance and measurable outcomes.',
-        },
-        {
-          lead: 'Governed multi-agent operations',
-          impact: 'Built and run agent workflows with role separation, durable context, human approval gates, secret boundaries and auditable evidence.',
-        },
-        {
-          lead: 'Revenue and adoption bridge',
-          impact: 'Connects operating model, adoption velocity and expansion paths across executives, architects, product, services and sales teams.',
-        },
-      ],
-      problems_section: `For ${company}, I would focus on converting AI interest into controlled deployment: use-case selection, stakeholder alignment, solution architecture, governance, evaluation criteria and adoption evidence.`,
+      achievements: proofImpacts.map((impact, index) => ({
+        lead: ['Enterprise proof', 'Agentic operating model', 'Adoption and revenue bridge'][index] || 'Relevant proof',
+        impact,
+      })),
+      problems_section: `For ${company}, I would focus on converting AI interest into controlled deployment: use-case selection, stakeholder alignment, solution architecture, governance, evaluation criteria, adoption evidence and expansion path.`,
       closing: 'I am Brazil-based today, open to US relocation for the right senior AI/GTM role, and would require employer-supported sponsorship or a credible transfer path.',
       language_closing: 'Regards,',
     },
@@ -731,7 +1028,8 @@ function buildCoverPayload({ company, role, profile, candidate }) {
   };
 }
 
-function buildAnswers({ company, role, profile, candidate }) {
+function buildAnswers({ company, role, reportText, profile, candidate }) {
+  const positioning = applicationPositioning({ role, company, reportText, profile });
   return {
     company,
     role,
@@ -752,9 +1050,9 @@ function buildAnswers({ company, role, profile, candidate }) {
       europe_authorized: 'Yes, Portuguese citizen / EU work authorization.',
     },
     free_text: {
-      why_role: `This ${role} role maps directly to my strongest lane: enterprise AI adoption, technical GTM, solution architecture and governed agentic operating models.`,
+      why_role: `This ${role} role maps directly to my strongest lane: ${positioning.archetype.toLowerCase()}, enterprise AI adoption, technical GTM, solution architecture and governed agentic operating models.`,
       why_company: `${company} is relevant because senior AI buyers need more than demos. They need use-case discipline, stakeholder alignment, architecture judgment, governance and a credible path from pilot to adoption.`,
-      relevant_experience: 'At ServiceNow I advise strategic enterprise stakeholders on platform strategy, AI adoption, ITOM/CMDB maturity, governance and measurable business outcomes. I also build governed multi-agent workflows that turn ambiguous implementation work into controlled execution and reusable evidence.',
+      relevant_experience: `${positioning.fitAnswer} At ServiceNow I advise strategic enterprise stakeholders on platform strategy, AI adoption, ITOM/CMDB maturity, governance and measurable business outcomes. I also build governed multi-agent workflows that turn ambiguous implementation work into controlled execution and reusable evidence.`,
       additional_information: `${profile?.narrative?.headline || 'Enterprise AI operator'} Portfolio: ${candidate.portfolio}`,
       how_heard: 'Found through my daily Career Ops AI GTM job search pipeline and evaluated against my US AI/enterprise GTM target criteria.',
     },
@@ -778,9 +1076,9 @@ function generateApplicationPackage(item, reportPath, reportText, score) {
   const manifestPath = path.join(PACKAGE_DIR, `${base}-manifest.json`);
 
   const html = buildCvHtml({ company, role, reportText, profile, cvText, candidate });
-  const coverPayload = buildCoverPayload({ company, role, profile, candidate });
+  const coverPayload = buildCoverPayload({ company, role, reportText, profile, candidate });
   coverPayload.output_path = coverPath;
-  const answers = buildAnswers({ company, role, profile, candidate });
+  const answers = buildAnswers({ company, role, reportText, profile, candidate });
 
   if (!DRY_RUN) {
     writeFileSync(htmlPath, html, 'utf8');
@@ -823,6 +1121,26 @@ function generateApplicationPackage(item, reportPath, reportText, score) {
   };
   if (!DRY_RUN) writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
   return { ...manifest, manifest_path: path.relative(ROOT, manifestPath), absolute: { cvPath, coverPath, answersPath } };
+}
+
+function updateApplicationManifest(packageInfo, submit) {
+  if (DRY_RUN || !packageInfo?.manifest_path) return;
+  const full = path.join(ROOT, packageInfo.manifest_path);
+  const current = readJson(full, {});
+  const submitted = Boolean(submit?.submitted);
+  const next = {
+    ...current,
+    status: submit?.status || current.status || '',
+    application_status: submit?.application_status || submit?.status || current.application_status || '',
+    submitted,
+    last_attempt_at: new Date().toISOString(),
+    needs_paulo_approval: submit?.needs_paulo_approval ?? !submitted,
+    blocker: submit?.blocker || '',
+    submission_evidence_path: submit?.confirmation_path || submit?.evidence_path || current.submission_evidence_path || '',
+    submission_report_path: packageInfo.report_path || current.submission_report_path || '',
+  };
+  if (submitted) next.submitted_at = next.submitted_at || next.last_attempt_at;
+  writeFileSync(full, `${JSON.stringify(next, null, 2)}\n`, 'utf8');
 }
 
 async function attemptSubmit(packageInfo) {
@@ -878,11 +1196,24 @@ async function attemptSubmit(packageInfo) {
       };
     }
 
+    await openApplicationForm(page);
     await fillCommonFields(page, candidate, packageInfo, answers);
     await page.waitForTimeout(1000);
     await page.screenshot({ path: beforePath, fullPage: true }).catch(() => {});
 
     const body = await safeBodyText(page);
+    if (isSubmissionSuccessText(body)) {
+      return {
+        status: 'submitted',
+        application_status: 'submitted',
+        submitted: true,
+        blocker: '',
+        needs_paulo_approval: false,
+        evidence_path: path.relative(ROOT, beforePath),
+        confirmation_path: path.relative(ROOT, beforePath),
+        evidence: redact(body).slice(0, 1000),
+      };
+    }
     const blocker = detectSubmitBlocker(body);
     if (blocker) {
       return {
@@ -944,11 +1275,42 @@ async function attemptSubmit(packageInfo) {
 
     await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
     await page.waitForTimeout(8000);
-    const finalText = await safeBodyText(page);
-    await page.screenshot({ path: afterPath, fullPage: true }).catch(() => {});
+  const finalText = await safeBodyText(page);
+  await page.screenshot({ path: afterPath, fullPage: true }).catch(() => {});
 
-    const gated = detectSubmitBlocker(finalText);
-    const success = /thank|received|submitted|application has been submitted|application submitted|success/i.test(finalText);
+    let gated = detectSubmitBlocker(finalText);
+    let success = isSubmissionSuccessText(finalText);
+    let finalEvidence = finalText;
+    let requiredAfterSubmit = success ? [] : await requiredEmptyFields(page);
+    let requiredMessage = /this field is required|please select an option|missing entry for required field/i.test(finalText);
+    if (!success && !gated && (requiredAfterSubmit.length || requiredMessage)) {
+      await fillCommonFields(page, candidate, packageInfo, answers);
+      await page.waitForTimeout(700);
+      if (await clickSubmitButton(page)) {
+        await page.waitForLoadState('networkidle', { timeout: 30000 }).catch(() => {});
+        await page.waitForTimeout(6000);
+        finalEvidence = await safeBodyText(page);
+        await page.screenshot({ path: afterPath, fullPage: true }).catch(() => {});
+        gated = detectSubmitBlocker(finalEvidence);
+        success = isSubmissionSuccessText(finalEvidence);
+        requiredAfterSubmit = success ? [] : await requiredEmptyFields(page);
+        requiredMessage = /this field is required|please select an option|missing entry for required field/i.test(finalEvidence);
+      }
+    }
+    if (!success && !gated && (requiredAfterSubmit.length || requiredMessage)) {
+      return {
+        status: 'ready_for_submit',
+        application_status: 'form_filled_required_fields_remaining',
+        submitted: false,
+        blocker: requiredAfterSubmit.length
+          ? `unfilled required fields: ${requiredAfterSubmit.slice(0, 8).join(', ')}`
+          : 'required field validation remained after submit click',
+        needs_paulo_approval: true,
+        evidence_path: path.relative(ROOT, beforePath),
+        confirmation_path: path.relative(ROOT, afterPath),
+        evidence: redact(finalEvidence).slice(0, 1000),
+      };
+    }
     return {
       status: success ? 'submitted' : (gated ? 'blocked' : 'ready_for_submit'),
       application_status: success ? 'submitted' : (gated ? 'blocked_after_submit_click' : 'submit_click_without_confirmation'),
@@ -957,7 +1319,7 @@ async function attemptSubmit(packageInfo) {
       needs_paulo_approval: !success,
       evidence_path: path.relative(ROOT, success ? afterPath : beforePath),
       confirmation_path: path.relative(ROOT, afterPath),
-      evidence: redact(finalText).slice(0, 1000),
+      evidence: redact(finalEvidence).slice(0, 1000),
     };
   } catch (error) {
     await page.screenshot({ path: afterPath, fullPage: true }).catch(() => {});
@@ -972,6 +1334,26 @@ async function attemptSubmit(packageInfo) {
   } finally {
     await browser.close().catch(() => {});
   }
+}
+
+async function openApplicationForm(page) {
+  const candidates = [
+    page.getByRole('button', { name: /apply for this job|apply now|apply/i }).last(),
+    page.getByRole('link', { name: /apply for this job|apply now|apply/i }).last(),
+    page.getByRole('tab', { name: /application/i }).last(),
+    page.locator('button, a, [role="tab"]').filter({ hasText: /application|apply for this job|apply now/i }).last(),
+  ];
+  for (const loc of candidates) {
+    if (!await loc.count().catch(() => 0)) continue;
+    const visible = await loc.isVisible().catch(() => false);
+    if (!visible) continue;
+    await loc.scrollIntoViewIfNeeded().catch(() => {});
+    await loc.click({ force: true }).catch(() => {});
+    await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {});
+    await page.waitForTimeout(1200);
+    return true;
+  }
+  return false;
 }
 
 function validateAutoSubmitCriteria(packageInfo, pageText, profile) {
@@ -990,6 +1372,11 @@ function validateAutoSubmitCriteria(packageInfo, pageText, profile) {
   if (/(payment required|enter payment|payment method|credit card|billing information|paid credits?|subscription required|application fee|fee to apply|job board boost|boost this application|upgrade plan)/.test(lower)) {
     issues.push('browser page contains payment/account-upgrade gate text');
   }
+  const ashbyLocation = ashbyApplicationLocationValue(pageText);
+  const ashbyLocationPolicy = ashbyLocationAutoSubmitPolicy(ashbyLocation, profile);
+  if (!ashbyLocationPolicy.ok) {
+    issues.push(ashbyLocationPolicy.reason);
+  }
   if (/background check|criminal history|\bsignature\b|e-sign|attestation/.test(lower)) {
     issues.push('background/signature/attestation text requires Paulo approval');
   }
@@ -1002,6 +1389,55 @@ function validateAutoSubmitCriteria(packageInfo, pageText, profile) {
   return { ok: issues.length === 0, issues };
 }
 
+function ashbyApplicationLocationValue(pageText) {
+  const lines = String(pageText || '')
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+  for (let i = 0; i < lines.length; i += 1) {
+    if (/^Location\*?$/.test(lines[i])) return lines[i + 1] || '';
+  }
+  return '';
+}
+
+function ashbyLocationAutoSubmitPolicy(value, profile) {
+  const location = String(value || '').trim();
+  if (!location) return { ok: true, reason: '' };
+  if (isBrazilLocation(location)) return { ok: true, reason: '' };
+  if (isUsOfficeLocation(location) && profileAllowsUsRelocation(profile)) {
+    return { ok: true, reason: '' };
+  }
+  return {
+    ok: false,
+    reason: `Ashby Location* value is outside Paulo approved location policy (${location}); safe submit blocked`,
+  };
+}
+
+function isBrazilLocation(value) {
+  return /(brazil|brasil|sao jose|são josé|sao paulo|são paulo)/i.test(String(value || ''));
+}
+
+function isUsOfficeLocation(value) {
+  const text = String(value || '');
+  if (/(japan|norway|india|canada|europe|london|germany|netherlands|united kingdom|uk|australia)/i.test(text)) {
+    return false;
+  }
+  return /(united states|usa|\bus\b|u\.s\.|san francisco|new york|nyc|boston|austin|seattle|miami|florida|texas|california|east coast|west coast|new jersey|virginia)/i.test(text);
+}
+
+function profileAllowsUsRelocation(profile) {
+  const text = [
+    profile?.location?.us_work_authorization,
+    profile?.location?.visa_status,
+    profile?.location?.onsite_availability,
+    profile?.location?.current_location,
+    profile?.location?.country,
+    profile?.compensation?.location_flexibility,
+  ].filter(Boolean).join(' ');
+  return /united states|u\.s\.|\bus\b|relocat|onsite|transfer|sponsor/i.test(text)
+    && /relocat|onsite|transfer|sponsor/i.test(text);
+}
+
 function packageFilesExist(packageInfo) {
   return [
     packageInfo.cv_path,
@@ -1011,6 +1447,10 @@ function packageFilesExist(packageInfo) {
   ].every((rel) => rel && existsSync(path.join(ROOT, rel)));
 }
 
+function isSubmissionSuccessText(text) {
+  return /thank|thanks.*applying|received|submitted|application has been submitted|application submitted|success/i.test(String(text || ''));
+}
+
 async function fillCommonFields(page, candidate, packageInfo, answers) {
   const absoluteCv = path.join(ROOT, packageInfo.cv_path);
   const absoluteCover = path.join(ROOT, packageInfo.cover_letter_path);
@@ -1018,8 +1458,10 @@ async function fillCommonFields(page, candidate, packageInfo, answers) {
   const compensationAnswer = profile?.compensation?.target_range || profile?.compensation?.minimum || '';
   await fillFirst(page, ['#first_name', 'input[name="first_name"]'], candidate.firstName);
   await fillFirst(page, ['#last_name', 'input[name="last_name"]'], candidate.lastName);
+  await fillInputByHint(page, /(^|\b)(full\s*)?name\b/i, candidate.fullName);
   await fillFirst(page, ['#email', 'input[type="email"]', '#_systemfield_email'], candidate.email);
   await fillFirst(page, ['#phone', 'input[type="tel"]'], candidate.phone);
+  await fillInputByHint(page, /phone/i, candidate.phone);
   await fillFirst(page, ['#_systemfield_name', 'input[name="name"]'], candidate.fullName);
   await uploadFirst(page, ['#resume', '#_systemfield_resume', 'input[type="file"][name*="resume" i]', 'input[type="file"][id*="resume" i]'], absoluteCv);
   await uploadFirst(page, ['#cover_letter', 'input[type="file"][name*="cover" i]', 'input[type="file"][id*="cover" i]'], absoluteCover);
@@ -1029,22 +1471,226 @@ async function fillCommonFields(page, candidate, packageInfo, answers) {
   await fillTextareaByHint(page, /(additional|anything else|other|portfolio|website|link)/i, free.additional_information || candidate.portfolio);
   await fillTextareaByHint(page, /(experience|achievement|project|relevant)/i, free.relevant_experience);
   await fillInputByHint(page, /(linkedin)/i, candidate.linkedin);
+  await fillInputByHint(page, /(github|git hub)/i, candidate.github || candidate.portfolio);
   await fillInputByHint(page, /(website|portfolio|personal site)/i, candidate.portfolio);
+  await chooseAshbyLocation(page, profile);
   await fillInputByHint(page, /(location|address|city)/i, candidate.location);
   await fillInputByHint(page, /(salary|compensation|pay|ote|expectation)/i, compensationAnswer);
   await fillTextareaByHint(page, /(salary|compensation|pay|ote|expectation)/i, compensationAnswer);
+  await chooseAshbyLocation(page, profile);
   await fillKnownRequiredFields(page, candidate, profile, answers);
+  await chooseAshbyLocation(page, profile);
+  await chooseKnownSelectOptions(page);
 
-  await clickBinaryByQuestion(page, /(authorized|authorised).*united states|legally.*work.*u\.?s\.?/i, 'No');
-  await clickBinaryByQuestion(page, /(sponsor|sponsorship|visa).*now|future.*sponsor|require.*sponsor/i, 'Yes');
+  await clickBinaryByQuestion(page, /(authorized|authorised).*work.*(u\.?s\.?|united states)|(u\.?s\.?|united states).*work.*authori[sz]ed|legally.*work.*(u\.?s\.?|united states)/i, 'No');
+  await clickBinaryByQuestion(page, /(visa sponsorship|sponsor|sponsorship|require.*visa|future.*visa|future.*sponsor)/i, 'Yes');
   await clickBinaryByQuestion(page, /(relocat|onsite|office|hybrid)/i, 'Yes');
-  await clickBinaryByQuestion(page, /(nyc|new york).*office|office.*2\/3|come into.*office/i, 'No');
+  await clickBinaryByQuestion(page, /(nyc|new york).*office|office.*2\/3|come into.*office/i, 'Yes');
   if (SETTINGS.legalAck) {
     await clickConsentCheckboxes(page);
   }
   if (SETTINGS.eeoDecline) {
     await chooseDeclineForDemographics(page);
+    await chooseKnownSelectOptions(page);
   }
+}
+
+async function chooseKnownSelectOptions(page) {
+  const decline = [/decline/i, /prefer not/i, /do not wish/i, /don't wish/i, /i do not want/i, /i don’t wish/i];
+  const choices = [
+    [/(authorized|authorised).*work|work.*authorization|right to work/i, [/^no\b/i]],
+    [/(sponsor|sponsorship|visa)/i, [/^yes\b/i]],
+    [/(relocat|hybrid|in-office|in office|office model|onsite|come into.*office)/i, [/^yes\b/i]],
+    [/(previously worked|worked for fin|worked for intercom|former employee)/i, [/^no\b/i]],
+    [/(how did you hear|how.*heard|source|referral source)/i, [/linkedin/i, /other/i, /career site/i]],
+    [/(gender|race|ethnicity|hispanic|latinx|veteran|disability|self-identification|demographic)/i, decline],
+  ];
+  for (const [question, options] of choices) {
+    await chooseOptionByQuestion(page, question, options);
+  }
+  await chooseGreenhouseComboboxes(page);
+}
+
+async function chooseAshbyLocation(page, profile) {
+  if (!/ashbyhq\.com/i.test(page.url())) return false;
+  await page.evaluate(() => {
+    const norm = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+    const visible = (el) => {
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none' && !el.disabled;
+    };
+    let index = 0;
+    for (const el of [...document.querySelectorAll('input, button, [role="combobox"], [aria-haspopup="listbox"]')]) {
+      if (!visible(el)) continue;
+      let current = el;
+      for (let depth = 0; current && depth < 5; depth += 1, current = current.parentElement) {
+        const label = el.id ? document.querySelector(`[for="${CSS.escape(el.id)}"]`)?.innerText || '' : '';
+        const text = norm(`${label} ${el.getAttribute('aria-label') || ''} ${el.name || ''} ${el.id || ''} ${current.innerText || ''}`);
+        if (/location\*/i.test(text) && !/location type/i.test(text)) {
+          el.setAttribute('data-career-ops-location-control', `location-${index += 1}`);
+          break;
+        }
+      }
+    }
+    return index;
+  }).catch(() => 0);
+
+  const city = profile?.location?.city || 'Sao Jose dos Campos';
+  const state = profile?.location?.state || 'Sao Paulo';
+  const country = profile?.location?.country || 'Brazil';
+  const attempts = [
+    { query: `${city}, ${country}`, option: /S(a|ã)o Jos(e|é).*Brazil|Brazil/i },
+    { query: state, option: /S(a|ã)o Paulo.*Brazil|Brazil.*S(a|ã)o Paulo/i },
+    { query: country, option: /Brazil/i },
+  ];
+  const controls = [
+    page.getByLabel(/^Location\*?$/i).first(),
+    page.getByRole('combobox', { name: /^Location\*?$/i }).first(),
+    page.locator('[data-career-ops-location-control]').first(),
+    page.locator('input[role="combobox"][placeholder*="Start typing" i]').first(),
+  ];
+  for (const control of controls) {
+    if (!await control.count().catch(() => 0)) continue;
+    if (!await control.isVisible().catch(() => false)) continue;
+    for (const attempt of attempts) {
+      await page.keyboard.press('Escape').catch(() => {});
+      await control.scrollIntoViewIfNeeded().catch(() => {});
+      await control.click({ force: true }).catch(() => {});
+      await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A').catch(() => {});
+      await page.keyboard.press('Backspace').catch(() => {});
+      await page.keyboard.type(attempt.query, { delay: 20 }).catch(() => {});
+      await page.waitForTimeout(450);
+      const option = page.getByRole('option', { name: attempt.option }).first();
+      if (await option.count().catch(() => 0)) {
+        await option.click({ force: true }).catch(() => {});
+      } else {
+        await page.keyboard.press('Enter').catch(() => {});
+      }
+      await page.waitForTimeout(600);
+      const selected = await control.evaluate((el) => {
+        const block = el.closest('label, fieldset, div')?.innerText || '';
+        return `${el.value || ''} ${block}`.replace(/\s+/g, ' ');
+      }).catch(() => '');
+      if (/Brazil/i.test(selected) && !/Japan|Norway/i.test(selected)) return true;
+    }
+  }
+  return false;
+}
+
+async function chooseGreenhouseComboboxes(page) {
+  const cases = [
+    [/^Country\*/i, 'Brazil', /Brazil/i],
+    [/Current Location/i, 'Brazil', /Brazil/i],
+    [/authorised to work|authorized to work|work authorisation|work authorization/i, 'sponsorship', /sponsorship|renewal/i],
+    [/willing to relocate/i, 'Yes', /^Yes$/i],
+    [/previously worked.*Fin|previously worked.*Intercom|former employee/i, 'No', /^No$/i],
+    [/hybrid in-office|office location.*3 days|work from our office/i, 'Yes', /^Yes$/i],
+    [/future job openings|email me about future/i, 'No', /^No$/i],
+    [/How did you hear/i, 'Other', /^Other$/i],
+    [/Gender/i, 'decline', /decline|prefer not|do not wish|do not want/i],
+    [/Hispanic|Latino/i, 'decline', /decline|prefer not|do not wish|do not want/i],
+    [/Veteran Status/i, 'decline', /decline|prefer not|do not wish|do not want/i],
+    [/Disability Status/i, 'decline', /decline|prefer not|do not wish|do not want/i],
+  ];
+  for (const [labelRe, query, optionRe] of cases) {
+    const ids = await page.evaluate(({ source, flags }) => {
+      const re = new RegExp(source, flags);
+      return [...document.querySelectorAll('input[role="combobox"]')]
+        .filter((el) => {
+          const label = el.id ? document.querySelector(`[for="${CSS.escape(el.id)}"]`)?.innerText || '' : '';
+          const labelledBy = el.getAttribute('aria-labelledby');
+          const ariaLabel = labelledBy ? document.getElementById(labelledBy)?.innerText || '' : '';
+          return re.test(`${label} ${ariaLabel} ${el.id || ''}`.replace(/\s+/g, ' '));
+        })
+        .map((el) => el.id)
+        .filter(Boolean);
+    }, { source: labelRe.source, flags: labelRe.flags }).catch(() => []);
+    for (const id of ids) {
+      await chooseReactSelectById(page, id, query, optionRe);
+    }
+  }
+}
+
+async function chooseReactSelectById(page, id, query, optionRe) {
+  const control = page.locator(`#${id}`).first();
+  if (!await control.count().catch(() => 0)) return false;
+  await page.keyboard.press('Escape').catch(() => {});
+  await control.scrollIntoViewIfNeeded().catch(() => {});
+  await control.click({ force: true }).catch(() => {});
+  await control.fill(query).catch(async () => {
+    await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A').catch(() => {});
+    await page.keyboard.press('Backspace').catch(() => {});
+    await page.keyboard.type(query, { delay: 20 }).catch(() => {});
+  });
+  await page.waitForTimeout(350);
+  const option = page.getByRole('option', { name: optionRe }).last();
+  if (await option.count().catch(() => 0)) {
+    await option.click({ force: true }).catch(() => {});
+    await page.waitForTimeout(250);
+    return true;
+  }
+  await page.keyboard.press('Enter').catch(() => {});
+  await page.waitForTimeout(250);
+  return true;
+}
+
+async function chooseOptionByQuestion(page, questionRe, optionRes) {
+  const controls = [
+    page.getByLabel(questionRe).first(),
+    page.getByRole('combobox', { name: questionRe }).first(),
+    page.getByRole('button', { name: questionRe }).first(),
+  ];
+  for (const control of controls) {
+    if (await chooseOptionOnControl(page, control, optionRes)) return true;
+  }
+
+  const containers = page.locator('label, fieldset, div').filter({ hasText: questionRe });
+  const count = Math.min(await containers.count().catch(() => 0), 30);
+  for (let i = 0; i < count; i += 1) {
+    const container = containers.nth(i);
+    const control = container.locator('select, [role="combobox"], input[role="combobox"], button[aria-haspopup], [aria-haspopup="listbox"]').first();
+    if (await chooseOptionOnControl(page, control, optionRes)) return true;
+  }
+  return false;
+}
+
+async function chooseOptionOnControl(page, control, optionRes) {
+  if (!await control.count().catch(() => 0)) return false;
+  const visible = await control.isVisible().catch(() => false);
+  if (!visible) return false;
+  const tag = await control.evaluate((el) => el.tagName).catch(() => '');
+  if (tag === 'SELECT') {
+    const value = await control.evaluate((el, patterns) => {
+      const res = patterns.map((item) => new RegExp(item.source, item.flags));
+      const option = [...el.options].find((candidate) => {
+        const text = `${candidate.text || ''} ${candidate.value || ''}`.trim();
+        return candidate.value && res.some((re) => re.test(text));
+      });
+      return option?.value || '';
+    }, optionRes.map((re) => ({ source: re.source, flags: re.flags }))).catch(() => '');
+    if (value) {
+      await control.selectOption(value).catch(() => {});
+      return true;
+    }
+  }
+
+  await control.scrollIntoViewIfNeeded().catch(() => {});
+  await control.click({ force: true }).catch(() => {});
+  await page.waitForTimeout(250);
+  for (const re of optionRes) {
+    const option = page.getByRole('option', { name: re }).first();
+    if (await option.count().catch(() => 0)) {
+      await option.click({ force: true }).catch(() => {});
+      return true;
+    }
+  }
+  const firstChoice = optionRes[0]?.source?.replace(/^\^|\$$|\\b|\\/g, '').replace(/\|.*$/, '') || '';
+  if (firstChoice) {
+    await page.keyboard.type(firstChoice, { delay: 20 }).catch(() => {});
+    await page.keyboard.press('Enter').catch(() => {});
+  }
+  return true;
 }
 
 async function fillKnownRequiredFields(page, candidate, profile, answers) {
@@ -1056,9 +1702,18 @@ async function fillKnownRequiredFields(page, candidate, profile, answers) {
     workFrom: 'Brazil-based/remote today; open to relocation or regular onsite cadence with employer-supported sponsorship or transfer path.',
     sponsorship: 'Yes, sponsorship or a credible internal transfer path is required for US roles.',
     relocation: 'Yes, for the right senior AI/GTM role with employer-supported relocation path.',
+    officeAvailability: 'Yes, contingent on employer-supported relocation, sponsorship, or an agreed transfer path.',
+    english: 'C1 / fluent professional English.',
+    german: 'None / beginner only.',
+    priorEmployer: 'No.',
+    futureOpenings: 'No.',
+    howHeard: 'LinkedIn',
+    aiPolicy: 'Yes. I used AI-assisted drafting and review, with human review and factual validation. All claims are accurate and my own.',
+    priorAnthropicInterview: 'No.',
     internalTool: 'Built and used Career Ops: a local multi-agent automation pipeline that scans AI/GTM roles, evaluates fit, generates tailored CV/cover/answer packs, captures browser evidence, preserves human gates, and produces approval dashboards.',
     consent: SETTINGS.legalAck ? 'Yes' : '',
     portfolio: candidate.portfolio,
+    github: candidate.github || candidate.portfolio,
     whyRole: free.relevant_experience || free.why_role || '',
   };
   await page.evaluate((values) => {
@@ -1088,16 +1743,27 @@ async function fillKnownRequiredFields(page, candidate, profile, answers) {
       el.dispatchEvent(new Event('blur', { bubbles: true }));
     };
     const answerFor = (context) => {
+      if (/authorized|authorised|legally.*work|work authorization|right to work/.test(context)) return 'No';
+      if (/visa|sponsor|sponsorship/.test(context)) return 'Yes';
+      if (/relocat/.test(context)) return 'Yes';
+      if (/previously worked|worked for fin|worked for intercom|former employee/.test(context)) return 'No';
+      if (/future job openings|future openings|email me about future|contact me about future/.test(context)) return 'No';
+      if (/interviewed at anthropic|anthropic.*interview/.test(context)) return 'No';
+      if (/current or most recent company|current company|most recent company/.test(context)) return 'ServiceNow';
       if (/country/.test(context)) return values.country;
+      if (/currently located|current location|where are you currently located|location|city/.test(context)) return values.location;
       if (/start|notice period|able to start/.test(context)) return values.notice;
+      if (/office|in-person|in person|onsite|hybrid|come into|working in our office|work in our office/.test(context)) return values.officeAvailability;
       if (/where.*work|work from/.test(context)) return values.workFrom;
-      if (/currently located|current location|where are you currently located|location/.test(context)) return values.location;
       if (/internal tool|automation.*built|people actually used/.test(context)) return values.internalTool;
-      if (/visa|sponsor|sponsorship/.test(context)) return values.sponsorship;
-      if (/relocat/.test(context)) return values.relocation;
+      if (/german|deutsch/.test(context)) return values.german;
+      if (/english/.test(context)) return values.english;
+      if (/how did you hear|how.*heard|source|referral source/.test(context)) return values.howHeard;
+      if (/ai policy|policy for application|use of ai|used ai|ai-assisted/.test(context)) return values.aiPolicy;
       if (/gdpr|privacy|data.*processing|read.*gdpr|gdpr statement/.test(context)) return values.consent || 'Yes';
       if (/how do you identify|gender identity|identity/.test(context)) return 'decline';
       if (/linkedin/.test(context)) return '';
+      if (/github|git hub/.test(context)) return values.github;
       if (/website|portfolio/.test(context)) return values.portfolio;
       if (/why|relevant|experience|additional/.test(context)) return values.whyRole;
       return '';
@@ -1107,13 +1773,24 @@ async function fillKnownRequiredFields(page, candidate, profile, answers) {
       const a = norm(answer);
       if (!t || !a) return 0;
       if (a === 'brazil' && /brazil|brasil/.test(t)) return 10;
+      if (/german|deutsch/.test(a) && /none|no german|beginner|a1|not applicable|n\/a/i.test(t)) return 10;
+      if (/english|fluent|c1/.test(a) && /c1|fluent|professional|advanced|native|full professional/i.test(t)) return 10;
+      if (/linkedin/.test(a) && /linkedin/i.test(t)) return 10;
+      if (/career ops|daily career ops/.test(a) && /other|company website|career site/i.test(t)) return 8;
       if (/yes/.test(a) && /^yes\b|^sim\b/.test(t)) return 10;
       if (/no/.test(a) && /^no\b|^nao\b|^não\b/.test(t)) return 10;
       if (t.includes(a) || a.includes(t)) return 8;
       return 0;
     };
+    const isTechnicalCombobox = (el) => (
+      el.getAttribute('role') === 'combobox'
+      || el.getAttribute('aria-autocomplete')
+      || el.getAttribute('aria-controls')
+      || /combobox|select|autocomplete/i.test(`${el.className || ''} ${el.parentElement?.className || ''}`)
+    );
     for (const el of [...document.querySelectorAll('input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"]), textarea')]) {
       if (!visible(el) || el.value) continue;
+      if (isTechnicalCombobox(el)) continue;
       const value = answerFor(contextFor(el));
       if (value) setControlValue(el, String(value).slice(0, el.maxLength > 0 ? el.maxLength : 900));
     }
@@ -1159,8 +1836,12 @@ async function fillKnownRequiredFields(page, candidate, profile, answers) {
     };
     clickRadioInContext(/visa|sponsor|sponsorship/, /^yes\b|^sim\b/);
     clickRadioInContext(/relocat/, /^yes\b|^sim\b/);
-    clickRadioInContext(/nyc|new york|office.*2\/3|come into.*office/, /^no\b|^nao\b|^não\b/);
+    clickRadioInContext(/nyc|new york|office.*2\/3|come into.*office|in-person|in person|onsite|hybrid|working in our office|work in our office/, /^yes\b|^sim\b/);
     clickRadioInContext(/authorized|authorised|legally.*work.*u\.?s\.?/, /^no\b|^nao\b|^não\b/);
+    clickRadioInContext(/previously worked|worked for fin|worked for intercom|former employee/, /^no\b|^nao\b|^não\b/);
+    clickRadioInContext(/future job openings|future openings|email me about future|contact me about future/, /^no\b|^nao\b|^não\b/);
+    clickRadioInContext(/interviewed at anthropic|anthropic.*interview/, /^no\b|^nao\b|^não\b/);
+    clickRadioInContext(/ai policy|policy for application|use of ai|used ai|ai-assisted/, /^yes\b|^sim\b/);
     if (values.consent) {
       for (const checkbox of [...document.querySelectorAll('input[type="checkbox"]')]) {
         if (!visible(checkbox) || checkbox.checked) continue;
@@ -1179,8 +1860,14 @@ async function fillFirst(page, selectors, value) {
   for (const selector of selectors) {
     const loc = page.locator(selector).first();
     if (await loc.count()) {
-      await loc.fill(String(value)).catch(() => {});
-      return true;
+      const visible = await loc.isVisible().catch(() => false);
+      if (!visible) continue;
+      try {
+        await loc.fill(String(value));
+        return true;
+      } catch {
+        continue;
+      }
     }
   }
   return false;
@@ -1191,9 +1878,13 @@ async function uploadFirst(page, selectors, file) {
   for (const selector of selectors) {
     const loc = page.locator(selector).first();
     if (await loc.count()) {
-      await loc.setInputFiles(file).catch(() => {});
-      await page.waitForTimeout(1000);
-      return true;
+      try {
+        await loc.setInputFiles(file);
+        await page.waitForTimeout(1000);
+        return true;
+      } catch {
+        continue;
+      }
     }
   }
   return false;
@@ -1218,7 +1909,7 @@ async function fillInputByHint(page, hint, value) {
   for (let i = 0; i < count; i += 1) {
     const loc = page.locator('input:not([type="hidden"]):not([type="file"]):not([type="checkbox"]):not([type="radio"])').nth(i);
     const meta = await fieldMeta(loc);
-    if (!meta.visible || meta.value) continue;
+    if (!meta.visible || meta.value || meta.technicalCombobox) continue;
     if (hint.test(meta.context)) {
       await loc.fill(String(value).slice(0, meta.maxLength > 0 ? meta.maxLength : 300)).catch(() => {});
     }
@@ -1235,6 +1926,12 @@ async function fieldMeta(locator) {
       visible: rect.width > 0 && rect.height > 0,
       value: el.value || '',
       maxLength: el.maxLength || 0,
+      technicalCombobox: Boolean(
+        el.getAttribute('role') === 'combobox'
+          || el.getAttribute('aria-autocomplete')
+          || el.getAttribute('aria-controls')
+          || /combobox|select|autocomplete/i.test(`${el.className || ''} ${el.parentElement?.className || ''}`),
+      ),
       context: `${label} ${el.name || ''} ${el.id || ''} ${el.placeholder || ''} ${parent}`.replace(/\s+/g, ' ').slice(0, 600),
     };
   }).catch(() => ({ visible: false, value: '', maxLength: 0, context: '' }));
@@ -1243,18 +1940,33 @@ async function fieldMeta(locator) {
 async function clickBinaryByQuestion(page, questionRe, answer) {
   await page.evaluate(({ source, flags, answer }) => {
     const re = new RegExp(source, flags);
+    const norm = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+    const visible = (el) => {
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+      return rect.width > 0 && rect.height > 0 && style.visibility !== 'hidden' && style.display !== 'none';
+    };
+    const matchesAnswer = (control) => {
+      const text = norm(control.innerText || control.value || control.getAttribute('aria-label') || '');
+      return new RegExp(`^${answer}$`, 'i').test(text);
+    };
     const nodes = [...document.querySelectorAll('label, div, fieldset, p, span')]
-      .filter((el) => re.test((el.innerText || '').replace(/\s+/g, ' ')));
+      .filter((el) => {
+        const text = norm(el.innerText || '');
+        return text && text.length < 900 && re.test(text);
+      })
+      .sort((a, b) => norm(a.innerText || '').length - norm(b.innerText || '').length);
     for (const node of nodes) {
       let current = node;
-      for (let depth = 0; current && depth < 7; depth += 1, current = current.parentElement) {
-        const controls = [...current.querySelectorAll('button, label, input[type="radio"]')];
+      for (let depth = 0; current && depth < 6; depth += 1, current = current.parentElement) {
+        const context = norm(current.innerText || '');
+        if (!re.test(context) || context.length > 1600) continue;
+        const controls = [...current.querySelectorAll('button, [role="radio"], label, input[type="radio"]')]
+          .filter(visible)
+          .filter(matchesAnswer);
         for (const control of controls) {
-          const text = (control.innerText || control.value || control.getAttribute('aria-label') || '').trim();
-          if (new RegExp(`^${answer}$`, 'i').test(text)) {
-            control.click();
-            return true;
-          }
+          control.click();
+          return true;
         }
       }
     }
@@ -1304,6 +2016,9 @@ async function safeBodyText(page) {
 
 function detectSubmitBlocker(text) {
   const lower = String(text || '').toLowerCase();
+  if (/couldn['’]?t submit your application.*possible spam|application submission was flagged as possible spam|possible spam/.test(lower)) {
+    return 'ATS possible spam / anti-automation rejection after submit click';
+  }
   if (/captcha|recaptcha|cloudflare|security challenge/.test(lower)) return 'captcha/security challenge';
   if (/verification code|security code|verify your email|one-time code|2fa|two-factor/.test(lower)) return 'email/security code required';
   if (/sign in|log in|login required|create an account/.test(lower)) return 'login/account gate';
@@ -1330,10 +2045,29 @@ async function requiredEmptyFields(page) {
       if (!visible || el.disabled || el.type === 'hidden') return [];
       const required = el.required || el.getAttribute('aria-required') === 'true';
       if (!required) return [];
-      const value = el.type === 'file' ? (el.files && el.files.length ? 'file' : '') : (el.value || '');
+      let value = el.type === 'file' ? (el.files && el.files.length ? 'file' : '') : (el.value || '');
+      if (el.tagName === 'SELECT') {
+        const selectedText = el.selectedOptions?.[0]?.textContent || '';
+        if (/^\s*(select|please select|choose|--)/i.test(selectedText)) value = '';
+      }
       if (value) return [];
       const label = el.id ? document.querySelector(`[for="${CSS.escape(el.id)}"]`)?.innerText : '';
-      return [label || el.name || el.id || el.placeholder || el.type || 'required field'];
+      const ancestorText = el.closest('label, fieldset, [data-testid], [class*="field" i], [class*="question" i], div')?.innerText || '';
+      const context = `${label || ''} ${el.name || ''} ${el.id || ''} ${el.placeholder || ''} ${el.getAttribute('aria-label') || ''} ${ancestorText}`
+        .replace(/\s+/g, ' ')
+        .trim();
+      const semanticIdentifier = `${label || ''}${el.name || ''}${el.id || ''}${el.placeholder || ''}${el.getAttribute('aria-label') || ''}${context}`;
+      if (el.matches('input[type="text"], input:not([type])') && !semanticIdentifier.trim()) return [];
+      const hasVisibleAnswer = /(yes|no|brazil|sao jose|são josé|linkedin|c1|fluent|none|prefer not|decline|career ops)/i.test(ancestorText);
+      const technicalComboboxInput = el.matches('input[type="text"], input:not([type])')
+        && (
+          el.getAttribute('role') === 'combobox'
+          || el.getAttribute('aria-autocomplete')
+          || el.getAttribute('aria-controls')
+          || /select|dropdown|combobox|chosen|select2/i.test(`${el.className || ''} ${el.parentElement?.className || ''}`)
+        );
+      if (technicalComboboxInput && hasVisibleAnswer) return [];
+      return [context || el.type || 'required field'];
     });
   }).catch(() => []);
 }
@@ -1355,7 +2089,11 @@ async function clickSubmitButton(page) {
   return false;
 }
 
-async function processItem(item) {
+async function processItem(
+  item,
+  submittedIndex = submittedApplicationIndex(),
+  previousAttemptIndex = previousApplicationAttemptIndex(),
+) {
   const started = new Date().toISOString();
   const base = { url: item.url, company: item.company, role: item.role, started_at: started };
   const hardBlock = applicationHardBlock(item);
@@ -1368,6 +2106,36 @@ async function processItem(item) {
       needs_paulo_approval: true,
       blocker: hardBlock.reason,
       hard_block_id: hardBlock.id,
+    };
+  }
+
+  const priorSubmission = submittedIndex.get(applicationUrlKey(item.url));
+  if (priorSubmission) {
+    return {
+      ...base,
+      company: item.company || priorSubmission.company,
+      role: item.role || priorSubmission.role,
+      status: 'skipped_already_submitted',
+      application_status: 'already_submitted',
+      submitted: false,
+      needs_paulo_approval: false,
+      blocker: `already submitted; source ${priorSubmission.source_path || priorSubmission.report_path || priorSubmission.manifest_path}`,
+      prior_submission: priorSubmission,
+    };
+  }
+
+  const priorAttempt = previousAttemptIndex.get(applicationUrlKey(item.url));
+  if (priorAttempt) {
+    return {
+      ...base,
+      company: item.company || priorAttempt.company,
+      role: item.role || priorAttempt.role,
+      status: 'skipped_previous_attempt',
+      application_status: 'previous_attempt_needs_review',
+      submitted: false,
+      needs_paulo_approval: false,
+      blocker: `previous ${priorAttempt.status || priorAttempt.application_status || 'application'} attempt exists; source ${priorAttempt.source_path || priorAttempt.report_path || priorAttempt.evidence_path}`,
+      prior_attempt: priorAttempt,
     };
   }
 
@@ -1390,6 +2158,7 @@ async function processItem(item) {
 
   const packageInfo = generateApplicationPackage({ ...item, ...details }, evaluation.reportPath, reportText, score);
   const submit = await attemptSubmit(packageInfo);
+  updateApplicationManifest(packageInfo, submit);
   const evidencePaths = [submit.evidence_path, submit.confirmation_path].filter(Boolean);
   return {
     ...base,
@@ -1649,6 +2418,17 @@ function writeRunReport(summary) {
 }
 
 function runSelfTest() {
+  const usRelocationProfile = {
+    location: {
+      us_work_authorization: 'Not currently authorized to work in the United States.',
+      visa_status: 'US: needs employer-supported visa/relocation, internal transfer path, or contractor-to-US conversion path.',
+      onsite_availability: 'Willing to relocate to the United States for the right AI/agents/GTM role with sponsorship.',
+      country: 'Brazil',
+    },
+    compensation: {
+      location_flexibility: 'US-first, open to US hybrid/onsite for top-tier AI roles.',
+    },
+  };
   const checks = [
     ['slugify', slugify('Strategic Account Executive, AI Native') === 'strategic-account-executive-ai-native'],
     ['score', parseScore('Global Score: 4.4/5') === 4.4],
@@ -1656,8 +2436,21 @@ function runSelfTest() {
     ['blocked-title', !isTarget({ company: 'Acme', role: 'SDR AI' })],
     ['blocked-servicenow-brazil', !isTarget({ company: 'ServiceNow', role: 'Account Executive AI', location: 'Sao Paulo, Brazil' })],
     ['blocked-elevenlabs', !isTarget({ company: 'ElevenLabs', role: 'Enterprise Account Executive AI', location: 'Remote US' })],
+    ['blocked-pure-ml-research', !isTarget({ company: 'Bland AI', role: 'Machine Learning Researcher, Multimodal LLMs', location: 'San Francisco' })],
+    ['allowed-forward-deployed-ai', isTarget({ company: 'Bland AI', role: 'Forward Deployed AI Engineer', location: 'San Francisco' })],
+    ['ashby-spam-blocker', /possible spam/i.test(detectSubmitBlocker("We couldn't submit your application. Your application submission was flagged as possible spam."))],
     ['missing-fields', unresolvedFieldsFromBlocker('unfilled required fields: Country*, text, Do you require visa sponsorship?*').length === 3],
     ['suggested-answer', /sponsorship/i.test(suggestedAnswerForRequiredField('Do you require visa sponsorship?'))],
+    ['ashby-brazil-location-policy', ashbyLocationAutoSubmitPolicy('Brazil', usRelocationProfile).ok],
+    ['ashby-us-relocation-location-policy', ashbyLocationAutoSubmitPolicy('San Francisco', usRelocationProfile).ok],
+    ['ashby-unsupported-location-policy', !ashbyLocationAutoSubmitPolicy('Tokyo', usRelocationProfile).ok],
+    ['autopilot-config-loaded', AUTOPILOT_CONFIG.submit_mode === 'auto_submit_low_risk'],
+    ['application-positioning', /agentic|enterprise/i.test(applicationPositioning({
+      role: 'Enterprise Account Executive, AI Agents',
+      company: 'Acme AI',
+      reportText: 'The role owns enterprise GTM, AI agent workflow adoption and customer-facing solution architecture.',
+      profile: usRelocationProfile,
+    }).summary)],
     ['approval-queue-item', approvalQueueItems([{
       status: 'ready_for_submit',
       needs_paulo_approval: true,
@@ -1679,6 +2472,7 @@ function runSelfTest() {
 
 async function main() {
   if (SELF_TEST) return runSelfTest();
+  const runTimeout = startRunTimeout();
   ensureDirs();
   ensurePipeline();
 
@@ -1716,12 +2510,52 @@ async function main() {
   const scanAddedMatch = (scan.stdout || '').match(/(\d+)\s+new entries added/i);
   if (scanAddedMatch) summary.scan_added = Number(scanAddedMatch[1]);
 
-  const pending = readPipelinePending().filter(isTarget).slice(0, SETTINGS.maxAttempts);
+  const submittedIndex = submittedApplicationIndex();
+  const previousAttemptIndex = previousApplicationAttemptIndex();
+  const allPending = readPipelinePending();
+  const nonTargetArchiveLimit = Math.max(SETTINGS.dailyLimit, SETTINGS.maxAttempts, 1);
+  const nonTargetPending = allPending
+    .filter((item) => !isTarget(item))
+    .slice(0, nonTargetArchiveLimit)
+    .map((item) => ({
+      url: item.url,
+      company: item.company,
+      role: item.role,
+      location: item.location,
+      status: 'skipped_not_target',
+      application_status: 'not_target_profile_policy',
+      submitted: false,
+      needs_paulo_approval: false,
+      blocker: notTargetReason(item),
+    }));
+  summary.processed.push(...nonTargetPending);
+  const seenPending = new Set();
+  const pending = allPending
+    .filter(isTarget)
+    .filter((item) => {
+      const key = applicationUrlKey(item.url);
+      if (!key || seenPending.has(key)) return false;
+      seenPending.add(key);
+      return true;
+    })
+    .slice(0, SETTINGS.maxAttempts);
   for (const item of pending) {
     try {
       // Process sequentially: one browser/ATS at a time.
-      const result = await processItem(item);
+      const result = await processItem(item, submittedIndex, previousAttemptIndex);
       summary.processed.push(result);
+      if (result.submitted) {
+        submittedIndex.set(applicationUrlKey(result.url), {
+          url: result.url,
+          company: result.company || '',
+          role: result.role || '',
+          submitted_at: result.started_at || new Date().toISOString(),
+          evidence_path: result.confirmation_path || result.evidence_path || '',
+          report_path: result.report_path || '',
+          manifest_path: result.manifest_path || '',
+          source_path: result.manifest_path || result.report_path || '',
+        });
+      }
       const productive = !isStalePipelineResult(result);
       if (productive && summary.processed.filter((processed) => !isStalePipelineResult(processed)).length >= SETTINGS.dailyLimit) {
         break;
@@ -1749,6 +2583,7 @@ async function main() {
   else if (summary.draft_count > 0) summary.status = 'draft_ready';
   else if (summary.blocked_count > 0) summary.status = 'blocked';
   else if (summary.evaluated_count > 0) summary.status = 'evaluated';
+  else if (summary.processed.every(isStalePipelineResult)) summary.status = 'no_hit';
 
   summary.report_path = path.relative(ROOT, path.join(REPORT_DIR, `${RUN_ID}-daily-us-ai-job-applications.md`));
   summary.approval_queue = writeApprovalQueue(summary);
@@ -1756,6 +2591,7 @@ async function main() {
   const output = canonicalOutput(summary);
   if (!JSON_ONLY) console.log(`Daily job application run: ${summary.status}`);
   console.log(JSON.stringify(output, null, 2));
+  if (runTimeout) clearTimeout(runTimeout);
 }
 
 function canonicalOutput(summary) {

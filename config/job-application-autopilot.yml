@@ -1,0 +1,19 @@
+# Non-secret defaults for Paulo's local n8n job-application autopilot.
+# Environment variables still override every value here.
+
+submit_mode: auto_submit_low_risk
+daily_limit: 3
+max_attempts: 12
+timeout_seconds: 900
+
+min_score: 4.0
+auto_submit_score: 4.2
+
+scan_enabled: true
+mail_enabled: true
+mail_lookback_hours: 30
+liveness_enabled: true
+
+legal_ack_vai: true
+eeo_decline_vai: true
+headed: false
