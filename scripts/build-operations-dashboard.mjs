@@ -68,21 +68,44 @@ function latestJobRuns() {
     });
 }
 
+function submittedManifestByUrl() {
+  const manifests = nestedFiles(path.join(ROOT, 'output', 'job-applications'), (name) => name.endsWith('-manifest.json'));
+  const byUrl = new Map();
+  for (const file of manifests) {
+    const data = readJson(file, {});
+    if (data?.url && data.application_status === 'submitted') {
+      byUrl.set(data.url, {
+        file: rel(file),
+        submittedAt: data.submitted_at || '',
+        evidence: data.submission_evidence_path || '',
+        report: data.submission_report_path || '',
+      });
+    }
+  }
+  return byUrl;
+}
+
 function latestApprovalItems() {
+  const submittedByUrl = submittedManifestByUrl();
   return nestedFiles(path.join(ROOT, 'reports', 'job-applications', 'approval-queue'), (name) => name.endsWith('.json'))
     .slice(-8)
     .flatMap((file) => {
       const data = readJson(file, {});
-      return (data.items || []).map((item) => ({
-        file: rel(file),
-        company: item.company || '',
-        role: item.role || '',
-        status: item.status || '',
-        score: item.score || '',
-        unresolvedFields: item.unresolved_fields || [],
-        action: item.action || '',
-        evidence: item.evidence_paths?.[0] || '',
-      }));
+      return (data.items || []).map((item) => {
+        const submitted = submittedByUrl.get(item.url);
+        return {
+          file: rel(file),
+          company: item.company || '',
+          role: item.role || '',
+          status: submitted ? 'submitted_post_approval' : item.status || '',
+          score: item.score || '',
+          unresolvedFields: submitted ? [] : item.unresolved_fields || [],
+          action: submitted
+            ? `Submitted at ${submitted.submittedAt}; manifest ${submitted.file}; report ${submitted.report}`
+            : item.action || '',
+          evidence: submitted?.evidence || item.evidence_paths?.[0] || '',
+        };
+      });
     })
     .slice(-20);
 }

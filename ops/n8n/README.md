@@ -31,6 +31,7 @@ npm run n8n:jobs:bridge
 npm run n8n:ollama:bridge
 npm run n8n:ollama:install-launchagent
 npm run n8n:ollama:self-test
+npm run n8n:growth
 ```
 
 ## Workflow
@@ -43,11 +44,28 @@ Imported workflow:
 
 `ops/n8n/workflows/career-ops-ollama-codex-supervisor.json`
 
+`ops/n8n/workflows/career-ops-growth-geo-seo.json`
+
 Execution prompt:
 
 `ops/n8n/freelance-execution-prompt.md`
 
 `ops/n8n/job-application-execution-prompt.md`
+
+`ops/n8n/growth-geo-seo-execution-prompt.md`
+
+## Growth GEO/SEO Radar
+
+Weekly, **report-only** radar that scores how retrievable/cite-able Paulo's brand and portfolio are by
+generative answer engines (ChatGPT Search, Perplexity, Google AI Overviews/Gemini, Claude) **and**
+classic search — **SEO is never scored without GEO**. Reference standard = AgentCore (agenticoscore.ai).
+
+- runner: `scripts/n8n-growth-geo-seo-run.sh` (`npm run n8n:growth`)
+- audits `config/growth-targets.yml` via `node geo-seo-audit.mjs --all` (curl of served artifacts, zero LLM tokens)
+- writes `reports/growth/geo-seo-audit-{host}-*.md` + `.brain/geo-seo/*.json` + `.brain/geo-seo-audit-latest.json`
+- emails Paulo a portfolio scorecard (Automation Email Policy); `N8N_GROWTH_EMAIL_MODE=always|actionable|none`
+- **report-only**: never deploys a GEO kit, never mutates a site / Search Console / GA / DNS / ads (human-gated)
+- workflow ships `active: false`; Paulo activates it after review
 
 ## Automation Operating Policy
 

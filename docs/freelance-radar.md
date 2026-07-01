@@ -20,7 +20,7 @@ node freelance-radar.mjs --limit 8
 
 Use `scripts/freelance-mail-radar.mjs` to turn official marketplace email alerts into ranked leads and proposal drafts. This path is designed to be fast without scraping logged-in pages or auto-submitting proposals.
 
-The Mail.app/n8n path is the operational inbox source while the Codex Gmail connector lacks mailbox read/search scope. As of 2026-06-30, Gmail connector profile access works, but label/search calls return `ACCESS_TOKEN_SCOPE_INSUFFICIENT`; treat that as `known_reauth_required` until Paulo reauthorizes the connector in Codex.
+The Mail.app/n8n path remains the operational inbox source for marketplace alerts. As of 2026-07-01 05:18 BRT, Paulo authorized the final Google consent for OpenAI/Gmail and the Codex Gmail connector was validated: profile, `INBOX`/`UNREAD` label listing, and a lightweight recent-message ID search all succeed. Treat Gmail connector status as `ok` unless a future connector call fails; keep message-body reads scoped to runs that actually need content.
 
 ```bash
 npm run mail:freelance -- --self-test

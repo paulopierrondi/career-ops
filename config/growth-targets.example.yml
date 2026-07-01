@@ -1,0 +1,19 @@
+version: 1
+name: growth-geo-seo-targets
+
+# Targets for `node geo-seo-audit.mjs --all` and the n8n growth radar.
+# SEO is never scored without GEO. Reference standard = AgentCore (agenticoscore.ai).
+# Copy to config/growth-targets.yml and add your own domains.
+
+reference_standard: agenticoscore.ai
+
+gates:
+  report_only: true
+  no_deploy: true
+  no_search_console_mutation: true
+
+targets:
+  - host: yourbrand.dev
+    role: brand
+  - host: yourproduct.app
+    role: product

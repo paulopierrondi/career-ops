@@ -3,11 +3,19 @@ cv.md
 data/applications.md
 data/pipeline.md
 data/scan-history.tsv
+data/follow-ups.md
+data/freelance-proposals.md
+data/pdf-index.tsv
 data/*mail-radar-state.json
 data/parser-output/**/*.json
 !data/parser-output/.gitkeep
 !data/parser-output/**/.gitkeep
 reports/*.md
+reports/application-screenshots/*
+reports/job-applications/*
+reports/freelance/*
+reports/growth/*
+reports/ads/*
 !reports/.gitkeep
 output/*
 !output/.gitkeep
@@ -19,6 +27,9 @@ batch/tracker-additions/**/*.tsv
 !batch/tracker-additions/.gitkeep
 jds/*
 !jds/.gitkeep
+interview-prep/*.md
+!interview-prep/story-bank.md
+!interview-prep/README.md
 
 # Writing samples (user's personal files — never committed)
 writing-samples/*
@@ -28,6 +39,8 @@ writing-samples/*
 config/profile.yml
 portals.yml
 modes/_profile.md
+modes/_custom.md
+config/growth-targets.yml
 .update-dismissed
 .update-lock
 
@@ -36,6 +49,9 @@ modes/_profile.md
 
 # Generated
 .resolved-prompt-*
+.brain/automation-runs/
+.brain/geo-seo/
+.brain/geo-seo-audit-latest.json
 node_modules/
 bun.lock
 

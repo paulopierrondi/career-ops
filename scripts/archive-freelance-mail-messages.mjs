@@ -10,17 +10,33 @@
 
 import { execFileSync } from 'node:child_process';
 
-const ids = process.argv.slice(2)
+const parseOnly = process.argv.includes('--parse-only');
+const idArgs = process.argv.slice(2).filter((arg) => arg !== '--parse-only');
+
+const requestedIds = idArgs
   .flatMap((arg) => arg.split(','))
   .map((arg) => arg.trim())
   .filter(Boolean)
+  .filter((arg, index, arr) => arr.indexOf(arg) === index);
+
+function normalizeMailMessageId(value) {
+  const match = /^(?:(?<source>[a-z0-9_-]+):)?(?<id>\d+)$/i.exec(value);
+  if (!match) {
+    throw new Error(`Invalid Mail message id "${value}". Expected numeric id or source-prefixed numeric id like "99freelas:353512".`);
+  }
+  return match.groups.id;
+}
+
+const ids = requestedIds
+  .map(normalizeMailMessageId)
   .filter((arg, index, arr) => arr.indexOf(arg) === index);
 
 if (ids.length === 0) {
   console.log(JSON.stringify({
     ok: true,
     archived_count: 0,
-    requested_ids: [],
+    requested_ids: requestedIds,
+    normalized_ids: [],
     verified_not_in_inbox: [],
     still_in_inbox: [],
     skipped: [],
@@ -28,8 +44,13 @@ if (ids.length === 0) {
   process.exit(0);
 }
 
-if (ids.some((id) => !/^\d+$/.test(id))) {
-  throw new Error('All Mail message ids must be numeric');
+if (parseOnly) {
+  console.log(JSON.stringify({
+    ok: true,
+    requested_ids: requestedIds,
+    normalized_ids: ids,
+  }, null, 2));
+  process.exit(0);
 }
 
 const appleScript = `
@@ -106,7 +127,8 @@ const verification = JSON.parse(execFileSync('osascript', ['-l', 'JavaScript'], 
 console.log(JSON.stringify({
   ok: verification.every((row) => !row.in_google_inbox),
   archived_count: verification.filter((row) => !row.in_google_inbox).length,
-  requested_ids: ids,
+  requested_ids: requestedIds,
+  normalized_ids: ids,
   verified_not_in_inbox: verification.filter((row) => !row.in_google_inbox).map((row) => row.id),
   still_in_inbox: verification.filter((row) => row.in_google_inbox).map((row) => row.id),
   osascript_result: stdout.trim(),

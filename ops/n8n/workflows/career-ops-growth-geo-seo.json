@@ -1,0 +1,77 @@
+{
+  "name": "Career Ops - Growth GEO SEO Radar",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Growth GEO/SEO Radar (report-only)\n\nWeekly served-artifact audit of Paulo's brand + portfolio.\n**SEO is never scored without GEO.** Reference: AgentCore (agenticoscore.ai).\n\n- runs scripts/n8n-growth-geo-seo-run.sh (node geo-seo-audit.mjs --all)\n- writes reports/growth/ + .brain/geo-seo/*.json\n- emails Paulo (Automation Email Policy)\n\nDeploying any generated GEO kit is HUMAN-GATED. No Search Console / GA / DNS / ads mutation.",
+        "height": 300,
+        "width": 420,
+        "color": 4
+      },
+      "id": "sticky-contract",
+      "name": "Operating contract",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [200, 40]
+    },
+    {
+      "parameters": {},
+      "id": "manual-trigger",
+      "name": "Manual run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [200, 400]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "weeks", "weeksInterval": 1, "triggerAtDay": [1], "triggerAtHour": 8 }
+          ]
+        }
+      },
+      "id": "schedule-weekly",
+      "name": "Weekly (Mon 08:00)",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 560]
+    },
+    {
+      "parameters": {
+        "command": "PROJECT_DIR=/Users/paulopierrondi/Projects/career-ops /Users/paulopierrondi/Projects/career-ops/scripts/n8n-growth-geo-seo-run.sh"
+      },
+      "id": "run-radar",
+      "name": "Run growth GEO/SEO radar",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [520, 480]
+    },
+    {
+      "parameters": {
+        "jsCode": "// The runner prints a JSON summary on stdout. Surface the scorecard for visibility.\nconst out = $input.first().json;\nlet parsed;\ntry { parsed = typeof out.stdout === 'string' ? JSON.parse(out.stdout) : out; } catch (e) { parsed = { ok: false, error: 'unparseable radar output' }; }\nreturn [{ json: parsed }];"
+      },
+      "id": "parse-result",
+      "name": "Parse radar result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [820, 480]
+    },
+    {
+      "parameters": {},
+      "id": "done",
+      "name": "Scorecard ready",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1080, 480]
+    }
+  ],
+  "connections": {
+    "Manual run": { "main": [[{ "node": "Run growth GEO/SEO radar", "type": "main", "index": 0 }]] },
+    "Weekly (Mon 08:00)": { "main": [[{ "node": "Run growth GEO/SEO radar", "type": "main", "index": 0 }]] },
+    "Run growth GEO/SEO radar": { "main": [[{ "node": "Parse radar result", "type": "main", "index": 0 }]] },
+    "Parse radar result": { "main": [[{ "node": "Scorecard ready", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}

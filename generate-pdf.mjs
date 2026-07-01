@@ -288,7 +288,12 @@ async function generatePDF() {
     console.log(`🧹 ATS normalization: ${totalReplacements} replacements (${breakdown})`);
   }
 
-  return renderHtmlToPdf(html, outputPath, { format, baseDir: dirname(inputPath) });
+  return renderHtmlToPdf(html, outputPath, {
+    format,
+    baseDir: dirname(inputPath),
+    reportNum,
+    sourceHtmlPath: inputPath,
+  });
 }
 
 /**
@@ -350,6 +355,8 @@ export async function inlineLocalFonts(html) {
 export async function renderHtmlToPdf(html, outputPath, opts = {}) {
   const format = opts.format || 'a4';
   const baseDir = opts.baseDir || process.cwd();
+  const reportNum = opts.reportNum || '';
+  const sourceHtmlPath = opts.sourceHtmlPath || '';
 
   mkdirSync(dirname(outputPath), { recursive: true });
 
@@ -398,7 +405,7 @@ export async function renderHtmlToPdf(html, outputPath, opts = {}) {
     console.log(`📦 Size: ${(pdfBuffer.length / 1024).toFixed(1)} KB`);
 
     try {
-      updatePDFManifest(reportNum, outputPath, inputPath, format);
+      updatePDFManifest(reportNum, outputPath, sourceHtmlPath || tmpHtmlPath, format);
       console.log(`🔗 Manifest: data/pdf-index.tsv updated${reportNum ? ` (report ${reportNum})` : ' (no --report given)'}`);
     } catch (err) {
       // The PDF itself succeeded — never fail the run over manifest bookkeeping.
