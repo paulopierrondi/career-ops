@@ -52,8 +52,12 @@ config/growth-targets.yml
 .brain/automation-runs/
 .brain/geo-seo/
 .brain/geo-seo-audit-latest.json
+demos/
 node_modules/
 bun.lock
+
+# One-off live application helpers with personal form data
+scripts/submit-anthropic-wait-code.mjs
 
 # OS
 .DS_Store
