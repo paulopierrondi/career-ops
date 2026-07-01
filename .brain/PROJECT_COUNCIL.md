@@ -14,11 +14,11 @@ This file is the local council overlay for `career-ops`. It turns the global Pro
 - Registry id: `career-ops`
 - Name: `career-ops`
 - Path: `/Users/paulopierrondi/Projects/career-ops`
-- Type: `node`
+- Type: `repo`
 - Obsidian note: `02_Projects/career-ops`
-- Linear hint: `n/a`
+- Linear hint: `Needs Linear project mapping`
 - Branch snapshot: `codex/career-ops-railway-app`
-- Domain lens: project-specific product domain
+- Domain lens: iOS/app portfolio and monetization domain
 
 ## Local Agents
 
@@ -26,11 +26,11 @@ This file is the local council overlay for `career-ops`. It turns the global Pro
 | --- | --- | --- | --- |
 | `local-product-owner` | `agente_business_owner` | `kimi` | What concrete user/business problem should this project solve now? |
 | `local-technical-lead` | `agente_technical_lead` | `codex` | What is the smallest technically coherent change and how do we verify it? |
-| `local-qa-test-agent` | `agente_test_lead` | `gemini` | What evidence proves this did not regress the critical path? |
+| `local-qa-test-agent` | `agente_test_lead` | `antigravity` | What evidence proves this did not regress the critical path? |
 | `local-release-guardian` | `agente_release_lead` | `claude` | Can this ship safely, and what explicit approval is still required? |
 | `local-automation-steward` | `agente_automation_lead` | `codex` | What should be automated here without increasing operational risk? |
 | `local-growth-operator` | `agente_marketing_evolution` | `kimi` | What distribution or monetization evidence should drive the next decision? |
-| `local-domain-agent` | `agente_unknown_unknowns` | `claude` | What domain-specific risk in project-specific product domain would a generic coder miss? |
+| `local-app-domain-agent` | `agente_unknown_unknowns` | `claude` | What domain-specific risk in iOS/app portfolio and monetization domain would a generic coder miss? |
 
 ## Agent Files
 
@@ -40,7 +40,7 @@ This file is the local council overlay for `career-ops`. It turns the global Pro
 - `.brain/local-agents/local-release-guardian.md`
 - `.brain/local-agents/local-automation-steward.md`
 - `.brain/local-agents/local-growth-operator.md`
-- `.brain/local-agents/local-domain-agent.md`
+- `.brain/local-agents/local-app-domain-agent.md`
 
 ## Required Use
 

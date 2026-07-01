@@ -2,21 +2,21 @@
 type: local-agent
 project_id: "career-ops"
 project_name: "career-ops"
-agent_id: "local-qa-test-agent"
-extends: "agente_test_lead"
-owner_cli: "antigravity"
+agent_id: "local-app-domain-agent"
+extends: "agente_unknown_unknowns"
+owner_cli: "claude"
 managed_by: "/Users/paulopierrondi/agents-hub/scripts/install-project-local-council.py"
 tags: [hub, council, local-agent, generated]
 ---
-# Local QA / Test Agent - career-ops
+# Local Domain Specialist - career-ops
 
 ## Mission
 
-test matrix, smoke checks, screenshots/visual QA, regression risks, and user acceptance evidence.
+App Store readiness, paywall/IAP, screenshots, analytics, retention, review risk, and revenue evidence.
 
 ## Primary Question
 
-What evidence proves this did not regress the critical path?
+What domain-specific risk in iOS/app portfolio and monetization domain would a generic coder miss?
 
 ## Mandatory Sources
 
